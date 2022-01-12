@@ -8,44 +8,30 @@ from collections import namedtuple
 
 import solver
 import lns
+import relax
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %(message)s')
 
-select_pred = "_lns_select"
-fix_pred = "_lns_fix"
+PREDICATE_SELECT = "_lns_select"
+PREDICATE_FIX = "_lns_fix"
 
 Solution = namedtuple("Solution", "cost select fix atoms")
 
+current_incumbent = None
 
-class ClingoVLNS(lns.AbstractClingoLNS):
+class ClingoLNS(lns.AbstractClingoLNS):
 
-    def __init__(self, asp_program, move_timeout, lns_size, lns_rate, solver_type,
-                 solver_options, min_variable, pt, seed, forget_on_shot, native_opt_in_move,
-                 min_lns_rate, max_lns_rate, change_threshold):
-        self.program = asp_program
-        self.lns_size = lns_size
-        self.lns_rate = lns_rate
-        self.solver_type = solver_type
-        self.solver_options = solver_options
-        self.min_variable = min_variable
-        self.seed = seed
+    def __init__(self, asp_program, relax_operators, move_timeout, solver_type,
+                 solver_options, min_variable, pt, seed, forget_on_shot, native_opt_in_move):
+        self.__solver_type = solver_type
+        self.__solver_options = solver_options
+        self.__min_variable = min_variable
+        self.__seed = seed
         self.__forget_on_shot = forget_on_shot
-        self.__min_lns_rate = min_lns_rate
-        self.__max_lns_rate = max_lns_rate
-        self.__change_threshold = change_threshold
 
-        super().__init__(move_timeout=move_timeout, strict_bound_prob=1, pre_optimize_timeout=pt, native_opt_in_move=native_opt_in_move)
-
-    def _program(self):
-        return self.program
-
-    def _instance_to_facts(self, instance):
-        return None
-
-    def _construct_initial_solution(self, instance):
-        return None
+        super().__init__(asp_program, relax_operators, move_timeout=move_timeout, strict_bound_prob=1, pre_optimize_timeout=pt, native_opt_in_move=native_opt_in_move)
 
     def _model_to_solution(self, model, instance):
         cost = model.cost
@@ -53,68 +39,22 @@ class ClingoVLNS(lns.AbstractClingoLNS):
         fix = []
 
         for s in model.symbols:
-            if s.match(select_pred, 1):
+            if s.match(PREDICATE_SELECT, 1):
                 select.append(s.arguments[0])
-            elif s.match(fix_pred, 2):
+            elif s.match(PREDICATE_FIX, 2):
                 fix.append((s.arguments[0], s.arguments[1]))
 
-        return Solution(cost, select, fix, model.shown)
+        current_incumbent = Solution(cost, select, fix, model.shown)
 
-    def _get_move_assumptions(self, instance, incumbent):
-        asm = []
-        max_selection_sz = len(incumbent.select)
-
-        no_select = False
-        if max_selection_sz == 0:
-            max_selection_sz = len(incumbent.atoms)
-            no_select = True
-
-        if self.lns_size is None:
-            assert 0 <= self.lns_rate <= 1
-            if self.__change_threshold != None:
-                if self._unsat_count > self.__change_threshold:
-                    self.lns_rate = max(self.__min_lns_rate, self.lns_rate - 0.1)
-                    self._unsat_count = 0
-                    logger.debug('decreasing lns-rate to %f' % self.lns_rate)
-                elif self._timeout_count > self.__change_threshold:
-                    self.lns_rate = min(self.__max_lns_rate, self.lns_rate + 0.1)
-                    self._timeout_count
-                    logger.debug('increasing lns-rate to %f' % self.lns_rate)
-
-            selection_sz = round(max_selection_sz * self.lns_rate)
-        else:
-            if self.lns_size > max_selection_sz:
-                selection_sz = max_selection_sz
-            elif 0 < self.lns_size <= max_selection_sz:
-                selection_sz = self.lns_size
-            elif -max_selection_sz <= self.lns_size < 0:
-                selection_sz = max_selection_sz - abs(self.lns_size)
-            else:
-                selection_sz = 0
-
-        if no_select:
-            asm = random.sample(incumbent.atoms, selection_sz)
-        else:
-            selection = random.sample(incumbent.select, selection_sz)
-            for sel in selection:
-                for atom, s in incumbent.fix:
-                    if sel == s:
-                        asm.append(atom)
-
-        logger.debug(f'neighbourhood: {selection_sz} / {max_selection_sz} elements = {len(asm)} atom.')
-
-        return asm
-
-    def _solution_to_assumptions(self, sol):
-        return []
+        return current_incumbent
 
     def _internal_solver(self):
-        if self.solver_type == 'clingo':
-            return solver.Clingo(options=self.solver_options, seed=self.seed, forget_on_shot=self.__forget_on_shot)
-        elif self.solver_type == 'clingo-dl':
-            return solver.ClingoDl(options=self.solver_options, minimize_variable=self.min_variable, seed=self.seed, forget_on_shot=self.__forget_on_shot)
-        elif self.solver_type == 'clingcon':
-            return solver.Clingcon(options=self.solver_options, seed=self.seed, forget_on_shot=self.__forget_on_shot)
+        if self.__solver_type == 'clingo':
+            return solver.Clingo(options=self.__solver_options, seed=self.__seed, forget_on_shot=self.__forget_on_shot)
+        elif self.__solver_type == 'clingo-dl':
+            return solver.ClingoDl(options=self.__solver_options, minimize_variable=self.__min_variable, seed=self.__seed, forget_on_shot=self.__forget_on_shot)
+        elif self.__solver_type == 'clingcon':
+            return solver.Clingcon(options=self.__solver_options, seed=self.__seed, forget_on_shot=self.__forget_on_shot)
         else:
             assert False, "Not a valid solver type!"
 
@@ -125,10 +65,10 @@ def print_model(atoms):
     print(" ")
 
 
-def main(input_program, global_timeout, move_timeout, lns_size, lns_rate, solver_type, solver_options,
-         min_variable, pt, seed, forget_on_shot, native_opt_in_move, min_lns_rate, max_lns_rate, change_threshold):
-    solver = ClingoVLNS(input_program, move_timeout, lns_size, lns_rate, solver_type, solver_options,
-                            min_variable, pt, seed, forget_on_shot, native_opt_in_move, min_lns_rate, max_lns_rate, change_threshold)
+def main(input_program, relax_operators, global_timeout, move_timeout, solver_type, solver_options,
+         min_variable, pt, seed, forget_on_shot, native_opt_in_move):
+    solver = ClingoLNS(input_program, relax_operators, move_timeout, solver_type, solver_options,
+                            min_variable, pt, seed, forget_on_shot, native_opt_in_move)
     solution = solver.solve([], global_timeout)
     if solution is not None:
         print_model(solution.atoms)
@@ -155,9 +95,9 @@ if __name__ == '__main__':
 
     def signal_handler(sig, frame):
         print('Search interrupted!')
-        if lns.best_solution is not None:
-            print_model(lns.best_solution.atoms)
-            print("Costs: " + str(lns.best_solution.cost))
+        if current_incumbent is not None:
+            print_model(current_incumbent.atoms)
+            print("Costs: " + str(current_incumbent.cost))
         else:
             print("No solution found!")
         sys.exit(0)
@@ -177,12 +117,8 @@ if __name__ == '__main__':
 
     group = parser.add_mutually_exclusive_group()
 
-    group.add_argument("-r", "--lns-rate", type=valid_rate, metavar='<n>', default=0.8,
-                       help='rate of how many select-elements are fixed')
-
-    group.add_argument("-s", "--lns-size", type=int, metavar='<n>', default=None,
-                       help='number of select-elements to be fixed, ' 
-                            'a negative value specifies the number of elements to be relaxed')
+    group.add_argument("-r", "--lns-rate", type=valid_rate, metavar='<n>', default=0.2,
+                       help='rate of how many atoms are relaxed')
 
     parser.add_argument('-st', '--solver-type', type=str, choices=['clingo', 'clingo-dl', 'clingcon'],
                         metavar='<arg>', default='clingo',
@@ -206,15 +142,6 @@ if __name__ == '__main__':
 
     parser.add_argument('-no', '--native-opt-in-move', action='store_true', help='whether or not native optimization should be used in a move instead of only returning next best model (not supported by all solver backends)')
     parser.set_defaults(native_opt_in_move=False)
-
-    parser.add_argument('-ct', '--change-threshold', type=int, metavar='<n>', default=None,
-                        help='number of consecutive moves after which the lns-rate is adjusted')
-
-    group.add_argument("--min-lns-rate", type=valid_rate, metavar='<n>', default=0.1,
-                       help='the minimum lns-rate (only relevant if change threshold is set)')
-
-    group.add_argument("--max-lns-rate", type=valid_rate, metavar='<n>', default=0.9,
-                       help='the maximum lns-rate (only relevant if change threshold is set)')
     
 
     args = parser.parse_args()
@@ -240,20 +167,20 @@ if __name__ == '__main__':
     else:
         program += sys.stdin.read()
 
+    relax_operators = []
+    relax_operators += [ relax.RandomAtomRelaxOperator(args.lns_rate) ]
+
+
     main(
         input_program=program,
+        relax_operators=relax_operators,
         global_timeout=args.time_limit,
         move_timeout=args.move_timeout,
-        lns_rate=args.lns_rate,
-        lns_size=args.lns_size,
         solver_type=args.solver_type,
         solver_options=parsed_options,
         min_variable=args.minimize_variable,
         pt=args.pre_optimize_timeout,
         seed=seed_value,
         forget_on_shot=args.forget_on_shot, 
-        native_opt_in_move=args.native_opt_in_move,
-        min_lns_rate=args.min_lns_rate, 
-        max_lns_rate=args.max_lns_rate, 
-        change_threshold=args.change_threshold
+        native_opt_in_move=args.native_opt_in_move
     )

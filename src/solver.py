@@ -14,11 +14,11 @@ from clingo.symbol import Number
 import clingcon
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %(message)s')
 
 
 class Clingo:
-    """
+    """ 
     presents the the api of clingo.Control in a different way.
     """
 
