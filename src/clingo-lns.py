@@ -9,6 +9,8 @@ from collections import namedtuple
 import solver
 import lns
 import relax
+import search
+import initial
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG,
@@ -17,46 +19,23 @@ logging.basicConfig(level=logging.DEBUG,
 PREDICATE_SELECT = "_lns_select"
 PREDICATE_FIX = "_lns_fix"
 
-Solution = namedtuple("Solution", "cost select fix atoms")
-
-current_incumbent = None
-
 class ClingoLNS(lns.AbstractClingoLNS):
 
-    def __init__(self, asp_program, relax_operators, move_timeout, solver_type,
-                 solver_options, min_variable, pt, seed, forget_on_shot, native_opt_in_move):
-        self.__solver_type = solver_type
-        self.__solver_options = solver_options
-        self.__min_variable = min_variable
-        self.__seed = seed
-        self.__forget_on_shot = forget_on_shot
+    def __init__(self, asp_program, initial_operator, relax_operators, search_operators, internal_solver):
 
-        super().__init__(asp_program, relax_operators, move_timeout=move_timeout, strict_bound_prob=1, pre_optimize_timeout=pt, native_opt_in_move=native_opt_in_move)
+        super().__init__(internal_solver, asp_program, initial_operator, relax_operators, search_operators)
 
-    def _model_to_solution(self, model, instance):
-        cost = model.cost
-        select = []
-        fix = []
+    def _select_operators(self):
+        relax_operator = random.choice(self._relax_operators)
+        search_operator = random.choice(self._search_operators)
 
-        for s in model.symbols:
-            if s.match(PREDICATE_SELECT, 1):
-                select.append(s.arguments[0])
-            elif s.match(PREDICATE_FIX, 2):
-                fix.append((s.arguments[0], s.arguments[1]))
+        logger.debug('selected relax operator %s and search operator %s' % (relax_operator.name(), search_operator.name()))
 
-        current_incumbent = Solution(cost, select, fix, model.shown)
-
-        return current_incumbent
-
-    def _internal_solver(self):
-        if self.__solver_type == 'clingo':
-            return solver.Clingo(options=self.__solver_options, seed=self.__seed, forget_on_shot=self.__forget_on_shot)
-        elif self.__solver_type == 'clingo-dl':
-            return solver.ClingoDl(options=self.__solver_options, minimize_variable=self.__min_variable, seed=self.__seed, forget_on_shot=self.__forget_on_shot)
-        elif self.__solver_type == 'clingcon':
-            return solver.Clingcon(options=self.__solver_options, seed=self.__seed, forget_on_shot=self.__forget_on_shot)
-        else:
-            assert False, "Not a valid solver type!"
+        return (relax_operator, search_operator)
+        
+    def _on_move_finished(self, operators, prev_cost, result, time_used):
+        # statistics, etc 
+        pass
 
 
 def print_model(atoms):
@@ -65,13 +44,12 @@ def print_model(atoms):
     print(" ")
 
 
-def main(input_program, relax_operators, global_timeout, move_timeout, solver_type, solver_options,
-         min_variable, pt, seed, forget_on_shot, native_opt_in_move):
-    solver = ClingoLNS(input_program, relax_operators, move_timeout, solver_type, solver_options,
-                            min_variable, pt, seed, forget_on_shot, native_opt_in_move)
-    solution = solver.solve([], global_timeout)
+def main(input_program, initial_operator, relax_operators, search_operators, internal_solver, global_timeout):
+    solver = ClingoLNS(input_program, initial_operator, relax_operators, search_operators, internal_solver)
+
+    solution = solver.solve(global_timeout)
     if solution is not None:
-        print_model(solution.atoms)
+        print_model(solution.model.shown)
         print("Costs: " + str(solution.cost))
     else:
         print("No solution found!")
@@ -93,16 +71,7 @@ if __name__ == '__main__':
             raise argparse.ArgumentTypeError('0 <= <n> <= 1 required!')
 
 
-    def signal_handler(sig, frame):
-        print('Search interrupted!')
-        if current_incumbent is not None:
-            print_model(current_incumbent.atoms)
-            print("Costs: " + str(current_incumbent.cost))
-        else:
-            print("No solution found!")
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
+    
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description='ASP + Large-Neighborhood Search')
 
@@ -140,10 +109,6 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--forget-on-shot', action='store_true', help='whether or not the previous state should be forgotten on each new lns iteration')
     parser.set_defaults(forget_on_shot=False)
 
-    parser.add_argument('-no', '--native-opt-in-move', action='store_true', help='whether or not native optimization should be used in a move instead of only returning next best model (not supported by all solver backends)')
-    parser.set_defaults(native_opt_in_move=False)
-    
-
     args = parser.parse_args()
 
     if args.seed == None:
@@ -167,20 +132,39 @@ if __name__ == '__main__':
     else:
         program += sys.stdin.read()
 
+    internal_solver = None
+    if args.solver_type == 'clingo':
+        internal_solver = solver.Clingo(options=parsed_options, seed=seed_value, forget_on_shot=args.forget_on_shot)
+    elif args.solver_type == 'clingo-dl':
+        internal_solver = solver.ClingoDl(options=parsed_options, minimize_variable=args.minimize_variable, seed=seed_value, forget_on_shot=args.forget_on_shot)
+    elif args.solver_type == 'clingcon':
+        internal_solver = solver.Clingcon(options=parsed_options, seed=seed_value, forget_on_shot=args.forget_on_shot)
+    else:
+        assert False, "Not a valid solver type!"
+
+
+    initial_operator = initial.ClingoInitialOperator(internal_solver, args.time_limit, pre_opt_time=args.pre_optimize_timeout)
+
     relax_operators = []
     relax_operators += [ relax.RandomAtomRelaxOperator(args.lns_rate) ]
+    # relax_operators += [ relax.RandomAtomRelaxOperator(0.2), 
+    #                      relax.RandomAtomRelaxOperator(0.3), 
+    #                      relax.RandomAtomRelaxOperator(0.5),
+    #                      relax.RandomConstantRelaxOperator(0.1),
+    #                      relax.RandomConstantRelaxOperator(0.2),
+    #                      relax.RandomConstantRelaxOperator(0.4) ]
 
+    search_operators = []
+    search_operators += [ search.ClingoSearchOperator(internal_solver, args.move_timeout) ]
+    # search_operators += [ search.ClingoSearchOperator(internal_solver, 5), 
+    #                       search.ClingoSearchOperator(internal_solver, 15),
+    #                       search.ClingoSearchOperator(internal_solver, 30) ]
 
     main(
         input_program=program,
+        initial_operator=initial_operator,
         relax_operators=relax_operators,
-        global_timeout=args.time_limit,
-        move_timeout=args.move_timeout,
-        solver_type=args.solver_type,
-        solver_options=parsed_options,
-        min_variable=args.minimize_variable,
-        pt=args.pre_optimize_timeout,
-        seed=seed_value,
-        forget_on_shot=args.forget_on_shot, 
-        native_opt_in_move=args.native_opt_in_move
+        search_operators=search_operators,
+        internal_solver=internal_solver,
+        global_timeout=args.time_limit
     )

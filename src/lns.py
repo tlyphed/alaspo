@@ -1,6 +1,6 @@
 import time
 import logging
-import random
+import initial
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %(message)s')
@@ -8,57 +8,45 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s [%(process)d:%(p
 
 class AbstractClingoLNS():
     
-    def __init__(self, program, relax_operators, move_timeout=5, strict_bound_prob=1.0, use_greedy=True, pre_optimize_timeout=0, native_opt_in_move=False):
+    def __init__(self, internal_solver, program, initial_operator, relax_operators, search_operators):
         '''
         instantiated the VLNS solver with required relax operators and the optional move timeout in seconds (default 5)
         '''
+        self.__internal_solver = internal_solver
         self.__program = program
-        self.__move_timeout = move_timeout
-        self.__strict_bound_prob = strict_bound_prob
-        self.__use_greedy = use_greedy
-        self.__pre_optimize_timeout = pre_optimize_timeout
-        self.__native_opt_in_move = native_opt_in_move
         self._unsat_count = 0
         self._timeout_count = 0
+
+        if initial_operator == None:
+            raise ValueError('no intial operator provided')
+
+        self.__initial_operator = initial_operator
 
         if relax_operators == None or len(relax_operators) == 0: 
             raise ValueError('there has to be at least one relax operator')
 
-        self._relax_operators = relax_operators        
+        self._relax_operators = relax_operators    
 
-    def _instance_to_facts(self, instance):
+        if search_operators == None or len(search_operators) == 0: 
+            raise ValueError('there has to be at least one search operator')
+
+        self._search_operators = search_operators      
+
+    def _select_operators(self):
         '''
-        converts the given instance to a string consisting of asp facts
+        selects and returns the next used relax+search operator combination
+        '''
+        pass
+        
+    def _on_move_finished(self, operators, prev_cost, result, time_used):
+        '''
+        called after every move and gives the used operators, the result of the move, previous cost and the time used by the move
         '''
         pass
 
-    def _construct_initial_solution(self, instance):
+    def solve(self, timeout):
         '''
-        returns the initial solution used in VLNS. if None, the algorithm will use the interal solver to obtain the initial solution.
-        '''
-        return None
-
-    def _solution_to_assumptions(self, solution):
-        '''
-        encodes a solution as assumptions which can be used by the internal solver
-        '''
-        pass
-
-    def _model_to_solution(self, model, instance):
-        '''
-        transforms an ASP model into a solution
-        '''
-        pass
-
-    def _internal_solver(self):
-        '''
-        returns a new instance of the internal solver to be used in VLNS
-        '''
-        pass
-
-    def solve(self, instance, timeout):
-        '''
-        runs the VLNS algorithm on the given instance for the given timelimit
+        runs the VLNS algorithm on the given ASP instance for the given timelimit
         '''
 
         self._unsat_count = 0
@@ -68,21 +56,10 @@ class AbstractClingoLNS():
         time_left = lambda: timeout - (time.time() - start_time)
 
         # get internal solver
-        internal_solver = self._internal_solver()
+        internal_solver = self.__internal_solver
 
         # load clear and program
         internal_solver.load_string(self.__program)
-        
-        # transform instance to asp facts
-        input_facts = self._instance_to_facts(instance)
-
-        # if the '_instance_to_facts' method is not implemented, the instance comes already parsed
-        if not input_facts and instance:
-            input_facts = instance
-
-        if input_facts != None:
-            # give facts to solver
-            internal_solver.load_string(input_facts)
 
         # ground base
         internal_solver.ground()
@@ -90,24 +67,20 @@ class AbstractClingoLNS():
         incumbent = None
 
         # obtain initial solution
-        initial_assumptions = []
-        if self.__use_greedy:
-            initial_solution = self._construct_initial_solution(instance)
-            if initial_solution != None:
-                initial_assumptions = self._solution_to_assumptions(initial_solution)
-                
-        solution = None
-        if self.__pre_optimize_timeout > 0:
-            solution = internal_solver.solve(assumptions=initial_assumptions, timelimit=self.__pre_optimize_timeout)
+        solution = self.__initial_operator.construct()
 
-        if solution == None:
-            solution = internal_solver.solve(assumptions=initial_assumptions, modellimit=1, timelimit=time_left())
+        if not isinstance(self.__initial_operator, initial.ClingoInitialOperator):
+            # non default init operator was used, hence we seed the solver with the greedy solution 
+            internal_solver.solve(assumptions=solution.model.symbols)
 
-        if not solution.sat:
+        
+        if solution == None or not solution.sat:
+            logger.info('COULD NOT FIND INITIAL SOLUTION')
             return None
+
         logger.info('initial cost: ' + str(solution.cost))
 
-        incumbent = self._model_to_solution(solution.model, instance)
+        incumbent = solution
 
         if solution.exhausted:
             logger.info('OPTIMAL SOLUTION FOUND')
@@ -119,31 +92,19 @@ class AbstractClingoLNS():
         # LNS loop
         assumptions = None
         while time_left() > 0:
+            move_start_time = time.time()
             # get assumptions
             # assumptions = None   # new neighbourhood every time!
             if assumptions == None:
-                operator = random.choice(self._relax_operators)
-                assumptions = operator._get_move_assumptions(instance, incumbent)
+                relax_operator, search_operator = self._select_operators()
+                assumptions = relax_operator.get_move_assumptions(incumbent)
             # perform move
-            if self.__move_timeout == -1:
-                move_timeout = time_left()
-            else:
-                move_timeout = min(self.__move_timeout, time_left())
+            solution = search_operator.execute(assumptions, time_left())
 
-            if move_timeout <= 0:
-                # preparing move used up remaining time, abort to avoid nontermination
-                break
-
-            if self.__native_opt_in_move and internal_solver.supports_native_opt():
-                solution = internal_solver.solve(timelimit=move_timeout, assumptions=assumptions, strict_bound = self.__strict_bound_prob > random.random())
-                assumptions = None
-            else:
-                solution = internal_solver.solve(timelimit=move_timeout, modellimit=1, assumptions=assumptions, strict_bound = self.__strict_bound_prob > random.random())
-
+            prev_cost = incumbent.cost
             if solution.sat:
                 # solution found, update incumbent
-                prev_cost = incumbent.cost
-                incumbent = self._model_to_solution(solution.model, instance)
+                incumbent = solution
                 logger.info('found solution with cost: ' + str(incumbent.cost))
                 if prev_cost == solution.cost:
                     assumptions = None
@@ -164,6 +125,10 @@ class AbstractClingoLNS():
                     self._unsat_count = 0
                     self._timeout_count += 1
                 assumptions = None
+
+            move_end_time = time.time()
+            operators = (relax_operator, search_operator)
+            self._on_move_finished(operators, prev_cost, solution, move_end_time - move_start_time)
 
         return incumbent
 

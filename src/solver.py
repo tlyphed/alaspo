@@ -314,6 +314,7 @@ class ClingoDl(Clingo):
         boundeff = bound - 1
         # ground new bound
         self._ctl.ground([('bound', [Number(boundeff)])])
+        logger.debug('added bound: ' + str(boundeff))
 
     def supports_native_opt(self):
         return False
