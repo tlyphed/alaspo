@@ -1,6 +1,6 @@
 # clingo-lns
 
-An LNS framework for the potassco ASP solver suite.
+An LNS framework for the Potassco ASP solver suite.
 
 The folder `src` contains the LNS implementation template as well a simple random relaxation-based problem-independent LNS. 
 Should work out-of-the-box in a conda env after running the following command:
