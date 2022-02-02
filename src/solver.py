@@ -14,7 +14,8 @@ from clingo.symbol import Number
 import clingcon
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d '
+                                                '%(levelname)s: %(message)s')
 
 
 class Clingo:
@@ -206,7 +207,7 @@ class Clingo:
         result = None
 
         n_models = 0
-        if modellimit != None:
+        if modellimit is not None:
             n_models = modellimit
 
         self._ctl.configuration.solve.models = n_models
@@ -230,7 +231,7 @@ class Clingo:
                 return self._make_solution(result=result, model=None)
             else:
                 # => some result&model was found within timelimit
-                assert True == result.satisfiable
+                assert result.satisfiable is True
                 assert 1 <= len(models)
                 model = models[len(models) - 1]
                 solution = self._make_solution(result=result, model=model)
@@ -297,7 +298,7 @@ class ClingoDl(Clingo):
         return cost
 
     def _add_bound_less_than(self, bound):
-        """add's the given bound to the program
+        """adds the given bound to the program
 
         the given bound is added to the logic program, such that the value of
         the minimize_variable (as named when invoking the constructor)
@@ -310,7 +311,7 @@ class ClingoDl(Clingo):
         """
         assert None != self._minimize_variable, ("cannot add a bound "
                                                  "without minimize_variable specified to constructor!")
-        assert bound != None
+        assert bound is not None
         boundeff = bound - 1
         # ground new bound
         self._ctl.ground([('bound', [Number(boundeff)])])
@@ -320,7 +321,7 @@ class ClingoDl(Clingo):
         return False
 
     def solve(self, assumptions=[], timelimit=None, modellimit=None, strict_bound=True):
-        logger.debug("solving for %is" % (timelimit))
+        logger.debug("solving for %is" % timelimit)
 
         if not self._minimize_variable:
             logger.debug('falling back to default clingo solve')
@@ -346,7 +347,7 @@ class ClingoDl(Clingo):
 
             result = None
             solution = None
-            while (result == None or result.satisfiable) and (modellimit == None or len(models) < modellimit):
+            while (result is None or result.satisfiable) and (modellimit is None or len(models) < modellimit):
                 nowtime = self._timestamp()
                 if endtime:
                     timeleft = endtime - nowtime
@@ -362,7 +363,7 @@ class ClingoDl(Clingo):
                     if solveHandle.wait(timeleft):
                         # not a timeout => retrieve the result
                         result = solveHandle.get()
-                        assert None != result
+                        assert result is not None
                         if result.satisfiable:
                             assert 1 <= len(models)
                             solution = self._make_solution(result=result, model=models[len(models) - 1])
@@ -376,13 +377,13 @@ class ClingoDl(Clingo):
                         break
             
             if None != result:
-                if result.satisfiable == False and len(models) == 0:
+                if result.satisfiable is False and len(models) == 0:
                     # UNSAT under given assumptions
                     return self._make_solution(result=result, model=None)
                 else:
                     # there has to be some solution
-                    assert solution != None
-                    if result.satisfiable == False:
+                    assert solution is not None
+                    if result.satisfiable is False:
                         solution.exhausted = True
 
                     return solution
@@ -399,7 +400,8 @@ class Clingcon(Clingo):
 
         self._theory = clingcon.ClingconTheory()
 
-        super().__init__(options=options, seed=seed, heuristic=heuristic, theory=self._theory, forget_on_shot=forget_on_shot)
+        super().__init__(options=options, seed=seed, heuristic=heuristic,
+                         theory=self._theory, forget_on_shot=forget_on_shot)
 
         self._minimize_atom = None
 
@@ -431,7 +433,7 @@ class Clingcon(Clingo):
                 if item[1].ast_type == clingo.ast.ASTType.TheoryAtom:
                     if item[1].term.ast_type == clingo.ast.ASTType.Function:
                         if item[1].term.name == 'minimize':
-                            if self._minimize_atom != None:
+                            if self._minimize_atom is not None:
                                 raise Exception('multiple minimize directives are currently not supported!')
                             self._minimize_atom = item[1]
                         elif item[1].term.name == 'maximize':

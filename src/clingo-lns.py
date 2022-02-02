@@ -14,10 +14,12 @@ import initial
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %(message)s')
+                    format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %('
+                           'message)s')
 
 PREDICATE_SELECT = "_lns_select"
 PREDICATE_FIX = "_lns_fix"
+
 
 class ClingoLNS(lns.AbstractClingoLNS):
 
@@ -31,7 +33,7 @@ class ClingoLNS(lns.AbstractClingoLNS):
 
         logger.debug('selected relax operator %s and search operator %s' % (relax_operator.name(), search_operator.name()))
 
-        return (relax_operator, search_operator)
+        return relax_operator, search_operator
         
     def _on_move_finished(self, operators, prev_cost, result, time_used):
         # statistics, etc 
@@ -70,9 +72,6 @@ if __name__ == '__main__':
         else:
             raise argparse.ArgumentTypeError('0 <= <n> <= 1 required!')
 
-
-    
-
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description='ASP + Large-Neighborhood Search')
 
     parser.add_argument('-i', '--input', type=existing_files, metavar='file', default=None, nargs='+',
@@ -106,12 +105,13 @@ if __name__ == '__main__':
     parser.add_argument('-sd', '--seed', type=int, metavar='SEED', default=None,
                         help='seed for random numbers')
 
-    parser.add_argument('-f', '--forget-on-shot', action='store_true', help='whether or not the previous state should be forgotten on each new lns iteration')
+    parser.add_argument('-f', '--forget-on-shot', action='store_true',
+                        help='whether or not the previous state should be forgotten on each new lns iteration')
     parser.set_defaults(forget_on_shot=False)
 
     args = parser.parse_args()
 
-    if args.seed == None:
+    if args.seed is None:
         seed_value = random.randrange(sys.maxsize)
     else:
         seed_value = args.seed
@@ -136,18 +136,20 @@ if __name__ == '__main__':
     if args.solver_type == 'clingo':
         internal_solver = solver.Clingo(options=parsed_options, seed=seed_value, forget_on_shot=args.forget_on_shot)
     elif args.solver_type == 'clingo-dl':
-        internal_solver = solver.ClingoDl(options=parsed_options, minimize_variable=args.minimize_variable, seed=seed_value, forget_on_shot=args.forget_on_shot)
+        internal_solver = solver.ClingoDl(options=parsed_options, minimize_variable=args.minimize_variable,
+                                          seed=seed_value, forget_on_shot=args.forget_on_shot)
     elif args.solver_type == 'clingcon':
         internal_solver = solver.Clingcon(options=parsed_options, seed=seed_value, forget_on_shot=args.forget_on_shot)
     else:
         assert False, "Not a valid solver type!"
 
-
-    initial_operator = initial.ClingoInitialOperator(internal_solver, args.time_limit, pre_opt_time=args.pre_optimize_timeout)
+    initial_operator = initial.ClingoInitialOperator(internal_solver, args.time_limit,
+                                                     pre_opt_time=args.pre_optimize_timeout)
 
     relax_operators = []
-    relax_operators += [ relax.RandomAtomRelaxOperator(args.lns_rate) ]
-    # relax_operators += [ relax.RandomAtomRelaxOperator(0.2), 
+    relax_operators += [relax.DeclarativeRelaxOperator(0.8, None, "rand")]
+    # relax_operators += [ relax.RandomAtomRelaxOperator(args.lns_rate),
+    #                      relax.RandomAtomRelaxOperator(0.2),
     #                      relax.RandomAtomRelaxOperator(0.3), 
     #                      relax.RandomAtomRelaxOperator(0.5),
     #                      relax.RandomConstantRelaxOperator(0.1),
@@ -155,7 +157,7 @@ if __name__ == '__main__':
     #                      relax.RandomConstantRelaxOperator(0.4) ]
 
     search_operators = []
-    search_operators += [ search.ClingoSearchOperator(internal_solver, args.move_timeout) ]
+    search_operators += [search.ClingoSearchOperator(internal_solver, args.move_timeout)]
     # search_operators += [ search.ClingoSearchOperator(internal_solver, 5), 
     #                       search.ClingoSearchOperator(internal_solver, 15),
     #                       search.ClingoSearchOperator(internal_solver, 30) ]

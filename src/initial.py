@@ -4,9 +4,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %(message)s')
+                    format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %('
+                           'message)s')
 
-class ClingoInitialOperator():
+
+class ClingoInitialOperator:
 
     def __init__(self, internal_solver, global_timeout, pre_opt_time=0):
         self.__timeout = global_timeout
