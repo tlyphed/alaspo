@@ -7,31 +7,12 @@ import os
 import argparse
 import signal
 from collections import namedtuple
-
 import solver
-import lns
+from lns import ClingoLNS
 import relax
 import search
 import initial
-
-
-class ClingoLNS(lns.AbstractClingoLNS):
-
-    def __init__(self, asp_program, initial_operator, relax_operators, search_operators, internal_solver):
-
-        super().__init__(internal_solver, asp_program, initial_operator, relax_operators, search_operators)
-
-    def _select_operators(self):
-        relax_operator = random.choice(self._relax_operators)
-        search_operator = random.choice(self._search_operators)
-
-        logger.debug('selected relax operator %s and search operator %s' % (relax_operator.name(), search_operator.name()))
-
-        return relax_operator, search_operator
-        
-    def _on_move_finished(self, operators, prev_cost, result, time_used):
-        # statistics, etc 
-        pass
+import strategy
 
 
 def print_model(atoms):
@@ -40,8 +21,8 @@ def print_model(atoms):
     print(" ")
 
 
-def main(input_program, initial_operator, relax_operators, search_operators, internal_solver, global_timeout):
-    solver = ClingoLNS(input_program, initial_operator, relax_operators, search_operators, internal_solver)
+def main(program, initial_operator, relax_operators, search_operators, strategy, internal_solver, global_timeout):
+    solver = ClingoLNS(internal_solver, program, initial_operator, relax_operators, search_operators, strategy)
 
     solution = solver.solve(global_timeout)
     if solution is not None:
@@ -143,7 +124,7 @@ if __name__ == '__main__':
     relax_operators = []
     # relax_operators += [relax.DeclarativeRelaxOperator(0.8, None, "rand")]
     relax_operators += [ relax.RandomAtomRelaxOperator(args.lns_rate) ]
-    #                      relax.RandomAtomRelaxOperator(0.2),
+    # relax_operators += [ relax.RandomAtomRelaxOperator(0.2),
     #                      relax.RandomAtomRelaxOperator(0.3), 
     #                      relax.RandomAtomRelaxOperator(0.5),
     #                      relax.RandomConstantRelaxOperator(0.1),
@@ -156,11 +137,14 @@ if __name__ == '__main__':
     #                       search.ClingoSearchOperator(internal_solver, 15),
     #                       search.ClingoSearchOperator(internal_solver, 30) ]
 
+    strat = strategy.RandomStrategy()
+
     main(
-        input_program=program,
+        program=program,
         initial_operator=initial_operator,
         relax_operators=relax_operators,
         search_operators=search_operators,
+        strategy=strat,
         internal_solver=internal_solver,
         global_timeout=args.time_limit
     )

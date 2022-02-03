@@ -4,9 +4,9 @@ import logging
 logger = logging.getLogger('root')
 
 
-class AbstractClingoLNS:
+class ClingoLNS:
     
-    def __init__(self, internal_solver, program, initial_operator, relax_operators, search_operators):
+    def __init__(self, internal_solver, program, initial_operator, relax_operators, search_operators, strategy):
         """
         instantiated the VLNS solver with required relax operators and the optional move timeout in seconds (default 5)
         """
@@ -20,27 +20,10 @@ class AbstractClingoLNS:
 
         self.__initial_operator = initial_operator
 
-        if relax_operators is None or len(relax_operators) == 0:
-            raise ValueError('there has to be at least one relax operator')
+        self.__strategy = strategy
 
-        self._relax_operators = relax_operators    
+        self.__strategy.prepare(relax_operators, search_operators)
 
-        if search_operators is None or len(search_operators) == 0:
-            raise ValueError('there has to be at least one search operator')
-
-        self._search_operators = search_operators      
-
-    def _select_operators(self):
-        """
-        selects and returns the next used relax+search operator combination
-        """
-        pass
-        
-    def _on_move_finished(self, operators, prev_cost, result, time_used):
-        """
-        called after every move and gives the used operators, the result of the move, previous cost and the time used by the move
-        """
-        pass
 
     def solve(self, timeout):
         """
@@ -93,7 +76,8 @@ class AbstractClingoLNS:
             # get assumptions
             # assumptions = None   # new neighbourhood every time!
             if assumptions is None:
-                relax_operator, search_operator = self._select_operators()
+                relax_operator, search_operator = self.__strategy.select_operators()
+                logger.debug('selected relax operator %s and search operator %s' % (relax_operator.name(), search_operator.name()))
                 assumptions = relax_operator.get_move_assumptions(incumbent)
             # perform move
             solution = search_operator.execute(assumptions, time_left())
@@ -125,7 +109,7 @@ class AbstractClingoLNS:
 
             move_end_time = time.time()
             operators = (relax_operator, search_operator)
-            self._on_move_finished(operators, prev_cost, solution, move_end_time - move_start_time)
+            self.__strategy.on_move_finished(operators, prev_cost, solution, move_end_time - move_start_time)
 
         return incumbent
 
