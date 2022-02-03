@@ -127,10 +127,8 @@ if __name__ == '__main__':
     # relax_operators += relax.RandomAtomRelaxOperator([0.1, 0.2, 0.3, 0.4, 0.5]).flatten() 
 
     search_operators = []
-    search_operators += [search.ClingoSearchOperator(internal_solver, args.move_timeout)]
-    # search_operators += [ search.ClingoSearchOperator(internal_solver, 5), 
-    #                       search.ClingoSearchOperator(internal_solver, 15),
-    #                       search.ClingoSearchOperator(internal_solver, 30) ]
+    search_operators += [ search.ClingoSearchOperator(internal_solver, [ args.move_timeout ]) ]
+    # search_operators += search.ClingoSearchOperator(internal_solver, [ 5, 15, 30 ]).flatten()
 
     strat = strategy.RandomStrategy()
 

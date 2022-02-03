@@ -25,7 +25,7 @@ class AbstractStrategy():
 
     def on_move_finished(self, operators, prev_cost, result, time_used):
         """
-        called after the finish of a move allow for statistics and adaptability
+        called after the finish of a move to allow for statistics and adaptability
         """
         pass
 
