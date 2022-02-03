@@ -122,14 +122,9 @@ if __name__ == '__main__':
                                                      pre_opt_time=args.pre_optimize_timeout)
 
     relax_operators = []
-    # relax_operators += [relax.DeclarativeRelaxOperator(0.8, None, "rand")]
-    relax_operators += [ relax.RandomAtomRelaxOperator(args.lns_rate) ]
-    # relax_operators += [ relax.RandomAtomRelaxOperator(0.2),
-    #                      relax.RandomAtomRelaxOperator(0.3), 
-    #                      relax.RandomAtomRelaxOperator(0.5),
-    #                      relax.RandomConstantRelaxOperator(0.1),
-    #                      relax.RandomConstantRelaxOperator(0.2),
-    #                      relax.RandomConstantRelaxOperator(0.4) ]
+    # relax_operators += [ relax.DeclarativeRelaxOperator([0.2], "rand") ]
+    relax_operators += [ relax.RandomAtomRelaxOperator([args.lns_rate]) ]
+    # relax_operators += relax.RandomAtomRelaxOperator([0.1, 0.2, 0.3, 0.4, 0.5]).flatten() 
 
     search_operators = []
     search_operators += [search.ClingoSearchOperator(internal_solver, args.move_timeout)]

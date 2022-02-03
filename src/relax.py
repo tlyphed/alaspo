@@ -5,52 +5,122 @@ import logging
 logger = logging.getLogger('root')
 
 
-class RandomAtomRelaxOperator:
+class AbstractRelaxOperator():
 
-    def __init__(self, rate):
-        assert 0 <= rate <= 1
-        self.__lns_rate = rate
+    def __init__(self, rates, initial_rate=None):
+        """
+        initializes the operator with a non-empty set of relaxation rates and an optional initial rate
+        """
+        if len(rates) <= 0:
+            raise ValueError('list of rates is empty')
+        p = None
+        for rate in rates:
+            if not 0 <= rate <= 1:
+                raise ValueError('rate is not between zero and one')
+            if p == None:
+                p = rate
+            elif p >= rate:
+                raise ValueError('rates have to strictly increase')
+        self.__rates = rates
+
+        self.__current_index = 0
+        if initial_rate != None:
+            if not initial_rate in self.__rates:
+                raise ValueError('initial rate is not in list of all rates')
+
+            self.__current_index = self.__rates.index(initial_rate)
+
+        self._rate = self.__rates[self.__current_index]
 
     def get_move_assumptions(self, incumbent):
         """
         returns the assumptions for the next VLNS move i.e. which parts of the
         solution are not relaxed according to the given rate
         """
+        pass
+
+    def increase_size(self):
+        """
+        increases the relaxation rate to the next defined rate. 
+        returns False if no increase is possible and True otherwise
+        """
+        if self.__current_index < len(self.__rates) - 1:
+            self.__current_index += 1
+            self._rate = self.__rates[self.__current_index]
+        else:
+            return False
+
+        return True
+
+    def decrease_size(self):
+        """
+        decreases the relaxation rate to the next defined rate. 
+        returns False if no decrease is possible and True otherwise
+        """
+        if self.__current_index > 0:
+            self.__current_index -= 1
+            self._rate = self.__rates[self.__current_index]
+        else:
+            return False
+
+        return True
+
+    def name(self):
+        """
+        return a string identifier for the operator (used for logging and statistics)
+        """
+        pass
+
+    def flatten(self):
+        """
+        returns a list of operators where each contains only one of the rates
+        """
+        operators = []
+
+        for rate in self.__rates:
+            operators += [ type(self)(rates=[rate]) ]
+
+        return operators
+
+
+class RandomAtomRelaxOperator(AbstractRelaxOperator):
+
+    def __init__(self, rates, initial_rate=None):
+        super().__init__(rates, initial_rate)
+
+    def get_move_assumptions(self, incumbent):
         asm = []
-       
+
         max_selection_sz = len(incumbent.model.shown)
 
-        selection_sz = round(max_selection_sz * (1 - self.__lns_rate))
+        selection_sz = round(max_selection_sz * (1 - self._rate))
 
         asm = random.sample(incumbent.model.shown, selection_sz)
 
-        logger.debug(f'atom operator relaxed {max_selection_sz - selection_sz} / {max_selection_sz} atoms.')
+        logger.debug(
+            f'atom operator relaxed {max_selection_sz - selection_sz} / {max_selection_sz} atoms.')
 
         return asm
 
     def name(self):
-        return str(100 * self.__lns_rate) + '% random atoms'
+        return str(100 * self._rate) + '% random atoms'
 
 
-class RandomConstantRelaxOperator:
-    
-    def __init__(self, rate):
-        assert 0 <= rate <= 1
-        self.__lns_rate = rate
+class RandomConstantRelaxOperator(AbstractRelaxOperator):
+
+    def __init__(self, rates, initial_rate=None):
+        super().__init__(rates, initial_rate)
 
     def get_move_assumptions(self, incumbent):
-        """
-        returns the assumptions for the next VLNS move i.e. which parts of the solution
-        are not relaxed according to the given rate
-        """
         constants = set()
         for s in incumbent.model.shown:
             constants = constants.union(s.arguments)
-       
-        relaxed_number = int(len(constants) * self.__lns_rate)
+
+        relaxed_number = int(len(constants) * self._rate)
         relaxed_constants = set(random.sample(constants, relaxed_number))
 
-        assumptions = [s for s in incumbent.model.shown if relaxed_constants.isdisjoint(s.arguments)]
+        assumptions = [
+            s for s in incumbent.model.shown if relaxed_constants.isdisjoint(s.arguments)]
 
         logger.debug(f"constant operator relaxed "
                      f"{len(incumbent.model.shown) - len(assumptions)} / {len(incumbent.model.shown)} atoms.")
@@ -58,18 +128,13 @@ class RandomConstantRelaxOperator:
         return assumptions
 
     def name(self):
-        return str(100 * self.__lns_rate) + '% random constants'
+        return str(100 * self._rate) + '% random constants'
 
 
-class DeclarativeRelaxOperator:
+class DeclarativeRelaxOperator(AbstractRelaxOperator):
 
-    def __init__(self, rate, size, name=None):
-
-        if size is None:
-            assert 0 <= rate <= 1
-
-        self.__lns_size = size
-        self.__lns_rate = rate
+    def __init__(self, rates, initial_rate=None, name=None):
+        super().__init__(rates, initial_rate)
         self.__name = name
 
     def get_move_assumptions(self, incumbent):
@@ -101,17 +166,7 @@ class DeclarativeRelaxOperator:
         max_selection_sz = len(select)
         assert max_selection_sz > 0
 
-        if self.__lns_size is None:
-            selection_sz = round(max_selection_sz * self.__lns_rate)
-        else:
-            if self.__lns_size > max_selection_sz:
-                selection_sz = max_selection_sz
-            elif 0 < self.__lns_size <= max_selection_sz:
-                selection_sz = self.__lns_size
-            elif -max_selection_sz <= self.__lns_size < 0:
-                selection_sz = max_selection_sz - abs(self.__lns_size)
-            else:
-                selection_sz = 0
+        selection_sz = round(max_selection_sz * (1 - self._rate))
 
         selection = random.sample(select, selection_sz)
         for sel in selection:
@@ -119,7 +174,8 @@ class DeclarativeRelaxOperator:
                 if sel == s:
                     asm.append(atom)
 
-        logger.debug(f"neighbourhood: {selection_sz} / {max_selection_sz} elements = {len(asm)} atom.")
+        logger.debug(f"lns_select operator relaxed "
+                     f"{selection_sz} / {max_selection_sz} atoms.")
 
         return asm
 
