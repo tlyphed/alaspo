@@ -1,11 +1,7 @@
 
 import random
 import logging
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %('
-                           'message)s')
+logger = logging.getLogger('root')
 
 
 class ClingoSearchOperator:

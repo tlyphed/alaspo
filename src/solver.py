@@ -1,6 +1,4 @@
 import argparse
-import logging
-import os
 import os.path
 import sys
 import time
@@ -13,9 +11,8 @@ import clingodl
 from clingo.symbol import Number
 import clingcon
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d '
-                                                '%(levelname)s: %(message)s')
+import logging
+logger = logging.getLogger('root')
 
 
 class Clingo:

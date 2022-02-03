@@ -1,12 +1,8 @@
 
 import random
-import logging
 import config
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %('
-                           'message)s')
+import logging
+logger = logging.getLogger('root')
 
 
 class RandomAtomRelaxOperator:
@@ -89,17 +85,17 @@ class DeclarativeRelaxOperator:
         for s in incumbent.model.symbols:
 
             if self.__name is None:
-                if s.match(config.select_pred, 1):
+                if s.match(config.SELECT_PRED, 1):
                     select.append(s.arguments[0])
 
-                elif s.match(config.fix_pred, 2):
+                elif s.match(config.FIX_PRED, 2):
                     fix.append((s.arguments[0], s.arguments[1]))
 
             else:
-                if s.match(config.select_pred, 2) and s.arguments[0].name == self.__name:
+                if s.match(config.SELECT_PRED, 2) and s.arguments[0].name == self.__name:
                     select.append(s.arguments[1])
 
-                elif s.match(config.fix_pred, 3) and s.arguments[0].name == self.__name:
+                elif s.match(config.FIX_PRED, 3) and s.arguments[0].name == self.__name:
                     fix.append((s.arguments[1], s.arguments[2]))
 
         max_selection_sz = len(select)

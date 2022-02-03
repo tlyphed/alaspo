@@ -1,8 +1,10 @@
+import config
+logger = config.setup_logger('root')
+
 import random
 import sys
 import os
 import argparse
-import logging
 import signal
 from collections import namedtuple
 
@@ -11,14 +13,6 @@ import lns
 import relax
 import search
 import initial
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)-15s [%(process)d:%(processName)s] %(module)s:%(lineno)d %(levelname)s: %('
-                           'message)s')
-
-PREDICATE_SELECT = "_lns_select"
-PREDICATE_FIX = "_lns_fix"
 
 
 class ClingoLNS(lns.AbstractClingoLNS):
@@ -147,8 +141,8 @@ if __name__ == '__main__':
                                                      pre_opt_time=args.pre_optimize_timeout)
 
     relax_operators = []
-    relax_operators += [relax.DeclarativeRelaxOperator(0.8, None, "rand")]
-    # relax_operators += [ relax.RandomAtomRelaxOperator(args.lns_rate),
+    # relax_operators += [relax.DeclarativeRelaxOperator(0.8, None, "rand")]
+    relax_operators += [ relax.RandomAtomRelaxOperator(args.lns_rate) ]
     #                      relax.RandomAtomRelaxOperator(0.2),
     #                      relax.RandomAtomRelaxOperator(0.3), 
     #                      relax.RandomAtomRelaxOperator(0.5),
