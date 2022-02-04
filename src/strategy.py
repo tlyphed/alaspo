@@ -61,6 +61,52 @@ class RandomStrategy(AbstractStrategy):
 
         return relax_operator, search_operator
 
+class RouletteStrategy(AbstractStrategy):
+    
+    def prepare(self, relax_operators, search_operators):
+        super().prepare(relax_operators, search_operators)
+
+        relax_operators = []
+        for op in self._relax_operators:
+            relax_operators += op.flatten()
+        self._relax_operators = relax_operators
+
+        search_operators = []
+        for op in self._search_operators:
+            search_operators += op.flatten()
+        self._search_operators = search_operators
+        
+        self._relax_weights = [1 for _ in range(len(relax_operators))]
+        self._search_weights = [1for _ in range(len(search_operators))]
+        self._alpha = 0.5
+
+        logger.debug('roulette strategy selected')
+        logger.debug('relax operators: ' + str([ o.name() for o in relax_operators ]))
+        logger.debug('search operators: ' + str([ o.name() for o in search_operators ]))
+
+  
+    def select_operators(self):
+        """
+        returns a random pair of relax and search operator
+        """
+        relax_operator = random.choices(self._relax_operators, self._relax_weights)[0]
+        search_operator = random.choices(self._search_operators, self._search_weights)[0]
+
+        return relax_operator, search_operator
+    
+        
+    def on_move_finished(self, operators, prev_cost, result, time_used):        
+        if result.cost is not None:
+            ratio = (result.cost - prev_cost) / time_used
+            self.update_weights(operators[0], operators[1], ratio)
+            
+        
+    def update_weights(self, relax_operator, search_operator, ratio):
+        relax_index = self._relax_operators.index(relax_operator)
+        search_index = self._search_operators.index(search_operator)
+
+        self._relax_weights[relax_index] = (1 - self._alpha) * self._relax_weights[relax_index] - self._alpha * ratio 
+        self._search_weights[search_index] = (1 - self._alpha) * self._search_weights[search_index] - self._alpha * ratio 
 
 # Strategy Factory
 
@@ -70,5 +116,7 @@ def get_strategy(type):
     """
     if type == 'random':
         return RandomStrategy()
+    elif type == 'roulette':
+        return RouletteStrategy()
     else:
         raise ValueError("no strategy '%s'" % type)
