@@ -180,4 +180,29 @@ class DeclarativeRelaxOperator(AbstractRelaxOperator):
         return asm
 
     def name(self):
-        return f"lns_select with rate {self.__lns_rate} and size {self.__lns_size}"
+        return f"lns_select with rate {self._rate}"
+
+
+# RelaxOperator Factory
+
+def get_operator(type, args):
+    """
+    returns a new relax operator of the given type with given args
+    """
+    rates = args['rates']
+    initial_rate = None
+    if 'initialRate' in args:
+        initial_rate = args['initialRate']
+
+    if type == 'randomAtoms':
+        return RandomAtomRelaxOperator(rates, initial_rate=initial_rate)
+    elif type == 'randomConstants':
+        return RandomConstantRelaxOperator(rates, initial_rate=initial_rate)
+    elif type == 'declarative':
+        name = None
+        if 'name' in args:
+            name = args['name']
+
+        return DeclarativeRelaxOperator(rates, initial_rate=initial_rate, name=name)
+    else:
+        raise ValueError('unknown relax operator "%s"' % type)

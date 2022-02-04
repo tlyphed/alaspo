@@ -101,3 +101,20 @@ class ClingoSearchOperator(AbstractSearchOperator):
 
     def name(self):
         return '%is' % self._timeout
+
+
+# SearchOperator Factory
+
+def get_operator(type, args, internal_solver):
+    """
+    returns a new search operator of the given type with given args
+    """
+    if type == 'default':
+        timeouts = args['timeouts']
+        initial_timeout = None
+        if 'initialTimeout' in args:
+            initial_timeout = args['initialTimeout']
+
+        return ClingoSearchOperator(internal_solver, timeouts, initial_timeout)
+    else:
+        raise ValueError('no search operator "%s"' % type)

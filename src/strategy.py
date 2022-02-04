@@ -1,5 +1,7 @@
 
 import random
+import logging
+logger = logging.getLogger('root')
 
 class AbstractStrategy():
 
@@ -31,6 +33,24 @@ class AbstractStrategy():
 
 
 class RandomStrategy(AbstractStrategy):
+
+    def prepare(self, relax_operators, search_operators):
+        super().prepare(relax_operators, search_operators)
+
+        relax_operators = []
+        for op in self._relax_operators:
+            relax_operators += op.flatten()
+        self._relax_operators = relax_operators
+
+        search_operators = []
+        for op in self._search_operators:
+            search_operators += op.flatten()
+        self._search_operators = search_operators
+
+        logger.debug('random strategy selected')
+        logger.debug('relax operators: ' + str([ o.name() for o in relax_operators ]))
+        logger.debug('search operators: ' + str([ o.name() for o in search_operators ]))
+
   
     def select_operators(self):
         """
@@ -41,3 +61,14 @@ class RandomStrategy(AbstractStrategy):
 
         return relax_operator, search_operator
 
+
+# Strategy Factory
+
+def get_strategy(type):
+    """
+    returns a new strategy of the given type
+    """
+    if type == 'random':
+        return RandomStrategy()
+    else:
+        raise ValueError("no strategy '%s'" % type)

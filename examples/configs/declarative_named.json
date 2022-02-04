@@ -1,0 +1,25 @@
+{
+    "strategy": "random",
+    "relaxOperators": [
+        {
+            "type": "declarative",
+            "name": "weeks",
+            "rates": [ 0.2 ],
+            "initialRate": 0.2
+        },
+        {
+            "type": "declarative",
+            "name": "groups",
+            "rates": [ 0.5, 0.8 ],
+            "initialRate": 0.8
+        }
+    ],
+    "searchOperators": [
+        {
+            "type": "default",
+            "timeouts": [ 5, 15, 30 ],
+            "initialTimeout": 15,
+            "solverArguments": ""
+        }
+    ]
+}
