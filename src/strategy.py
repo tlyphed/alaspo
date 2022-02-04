@@ -87,7 +87,7 @@ class RouletteStrategy(AbstractStrategy):
   
     def select_operators(self):
         """
-        returns a random pair of relax and search operator
+        returns a pair of relax and search operators depending on the weights
         """
         relax_operator = random.choices(self._relax_operators, self._relax_weights)[0]
         search_operator = random.choices(self._search_operators, self._search_weights)[0]
