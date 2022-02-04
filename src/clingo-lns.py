@@ -6,11 +6,10 @@ import signal
 from collections import namedtuple
 import solver
 from lns import ClingoLNS
-import relax
-import search
 import initial
 import strategy
 import config
+import json_config
 logger = config.setup_logger('root')
 
 
@@ -70,13 +69,8 @@ if __name__ == '__main__':
     parser.add_argument('-gt', '--time-limit', type=int, metavar='<n>', default=300,
                         help='time limit for the lns search')
 
-    parser.add_argument('-mt', '--move-timeout', type=int, metavar='<n>', default=15,
-                        help='time limit for individual solver calls')
-
-    group = parser.add_mutually_exclusive_group()
-
-    group.add_argument("-r", "--lns-rate", type=valid_rate, metavar='<n>', default=0.2,
-                       help='rate of how many atoms are relaxed')
+    parser.add_argument("-c", "--config", type=existing_files, metavar='file',
+                        help='the config file specifying the relax and search operators')
 
     parser.add_argument('-st', '--solver-type', type=str, choices=['clingo', 'clingo-dl', 'clingcon'],
                         metavar='<arg>', default='clingo',
@@ -117,8 +111,8 @@ if __name__ == '__main__':
     program = ''
     if args.input is not None:
         for asp_file in args.input:
-
-            program += open(asp_file, 'r').read()
+            with open(asp_file, 'r') as f:
+                program += f.read()
     else:
         program += sys.stdin.read()
 
@@ -136,14 +130,12 @@ if __name__ == '__main__':
     initial_operator = initial.ClingoInitialOperator(internal_solver, args.time_limit,
                                                      pre_opt_time=args.pre_optimize_timeout)
 
-    relax_operators = []
-    # relax_operators += [ relax.DeclarativeRelaxOperator([0.2], "rand") ]
-    relax_operators += [ relax.RandomAtomRelaxOperator([args.lns_rate]) ]
-    # relax_operators += relax.RandomAtomRelaxOperator([0.1, 0.2, 0.3, 0.4, 0.5]).flatten() 
+    con = json_config.DEFAULT_CONFIG
+    if args.config != None:
+        with open(args.config, 'r') as f:
+            con = f.read()
 
-    search_operators = []
-    search_operators += [ search.ClingoSearchOperator(internal_solver, [ args.move_timeout ]) ]
-    # search_operators += search.ClingoSearchOperator(internal_solver, [ 5, 15, 30 ]).flatten()
+    strat, relax_operators, search_operators = json_config.parse_config(con, internal_solver)
 
     strat = strategy.RandomStrategy()
 
