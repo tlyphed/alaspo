@@ -76,37 +76,50 @@ class RouletteStrategy(AbstractStrategy):
             search_operators += op.flatten()
         self._search_operators = search_operators
         
-        self._relax_weights = [1 for _ in range(len(relax_operators))]
-        self._search_weights = [1for _ in range(len(search_operators))]
+        self._weights = {}
+        
+        for r_op in self._relax_operators:
+            for s_op in self._search_operators:
+                self._weights[(r_op, s_op)] = 0
+        
+        self._to_initialize = True
+        
         self._alpha = 0.5
 
         logger.debug('roulette strategy selected')
         logger.debug('relax operators: ' + str([ o.name() for o in relax_operators ]))
         logger.debug('search operators: ' + str([ o.name() for o in search_operators ]))
 
-  
     def select_operators(self):
         """
         returns a pair of relax and search operators depending on the weights
-        """
-        relax_operator = random.choices(self._relax_operators, self._relax_weights)[0]
-        search_operator = random.choices(self._search_operators, self._search_weights)[0]
+        """        
+
+        relax_operator, search_operator = random.choices(list(self._weights.keys()), list(self._weights.values()))[0]
 
         return relax_operator, search_operator
     
         
-    def on_move_finished(self, operators, prev_cost, result, time_used):        
-        if result.cost is not None:
-            ratio = (result.cost - prev_cost) / time_used
-            self.update_weights(operators[0], operators[1], ratio)
-            
+    def on_move_finished(self, operators, prev_cost, result, time_used):   
         
-    def update_weights(self, relax_operator, search_operator, ratio):
-        relax_index = self._relax_operators.index(relax_operator)
-        search_index = self._search_operators.index(search_operator)
+        if result.cost is not None:
+            if self._to_initialize:
+                for s_r_pair in self._weights:
+                    self._weights[s_r_pair] = result.cost
+                    
+                self._to_initialize = False
 
-        self._relax_weights[relax_index] = (1 - self._alpha) * self._relax_weights[relax_index] - self._alpha * ratio 
-        self._search_weights[search_index] = (1 - self._alpha) * self._search_weights[search_index] - self._alpha * ratio 
+            
+            ratio = (result.cost - prev_cost) / time_used
+            self.update_weights(operators, ratio)
+            
+        else:
+            self.update_weights(operators, 0)
+            
+        print(self._weights.values())
+    def update_weights(self, operators, ratio):
+
+        self._weights[operators] = (1 - self._alpha) * self._weights[operators] - self._alpha * ratio 
 
 # Strategy Factory
 
