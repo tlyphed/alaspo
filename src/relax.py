@@ -51,11 +51,12 @@ class AbstractRelaxOperator():
         pass
 
     def increase_size(self):
+        print('increase')
         """
         increases the relaxation rate to the next defined rate. 
         returns False if no increase is possible and True otherwise
         """
-        if self.__current_index < len(self.__rates) - 1:
+        if self.__current_index < len(self.__sizes) - 1:
             self.__current_index += 1
             self.size = self.__sizes[self.__current_index]
         else:
@@ -64,6 +65,7 @@ class AbstractRelaxOperator():
         return True
 
     def decrease_size(self):
+        print('decrease')
         """
         decreases the relaxation rate to the next defined rate. 
         returns False if no decrease is possible and True otherwise

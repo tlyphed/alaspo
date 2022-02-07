@@ -1,5 +1,6 @@
 
 import random
+import pprint
 import logging
 logger = logging.getLogger('root')
 
@@ -44,7 +45,7 @@ class RandomStrategy(AbstractStrategy):
 
         search_operators = []
         for op in self._search_operators:
-            search_operators += op.flatten()
+                search_operators += op.flatten()
         self._search_operators = search_operators
 
         logger.debug('random strategy selected')
@@ -60,6 +61,103 @@ class RandomStrategy(AbstractStrategy):
         search_operator = random.choice(self._search_operators)
 
         return relax_operator, search_operator
+
+class JohannesStrategy(AbstractStrategy):
+    
+    def prepare(self, relax_operators, search_operators):
+        super().prepare(relax_operators, search_operators)
+
+        relax_operators = []
+        for op in self._relax_operators:
+            relax_operators += op.flatten()
+        self._relax_operators = relax_operators
+
+        search_operators = []
+        for op in self._search_operators:
+            search_operators += op.flatten()
+        self._search_operators = search_operators
+        
+        self._current_relax_operator = random.choice(self._relax_operators)
+        self._current_search_operator = random.choice(self._search_operators)
+        
+        self._strikes = 0
+
+        logger.debug('johannes strategy selected')
+        logger.debug('relax operators: ' + str([ o.name() for o in relax_operators ]))
+        logger.debug('search operators: ' + str([ o.name() for o in search_operators ]))
+
+  
+    def select_operators(self):
+        
+        relax_operator = self._current_relax_operator
+        search_operator = self._current_search_operator
+
+        return relax_operator, search_operator
+
+    def on_move_finished(self, operators, prev_cost, result, time_used):   
+
+        """             
+        LOOP:
+
+        RUN LNS iteration with (S,N)
+
+        CASES:
+            1. Improvement found:
+            -> Do nothing ("Never change a winning team!")
+
+            2. UNSAT
+            (do this only after 3 times in a row, "1st strike, 2nd strike, out!")
+            (N cannot produce better solutions => size of N needs to be increased or
+            type of N needs to be changed)
+                -> INCREASE size for N to the next level; if there is none
+                (S,N) = SELECT_NEW_PAIR() where type of S or type of N is different
+
+            3. TIMEOUT:
+            (do this only after 3 times in a row, "1st strike, 2nd strike, out!")
+            (S cannot find better solutions => extensiveness of S needs to be
+            increased or size of N needs to be decreased)
+            -> DECIDE by coin flip:
+                a) DECREASE size for N to the next level; if there is none
+                (S,N) = SELECT_NEW_PAIR() where type of S or type of N is different
+
+                b) INCREASE extensiveness of S to the next level; if there is none
+                (S,N) = SELECT_NEW_PAIR() where type of S or type of N is different
+        """
+        if result.cost is not None:
+            return
+        elif not result.sat and result.exhausted:
+            if self._strikes == 3:
+                if not self._current_relax_operator.increase_size():
+                    self._select_new_pair(operators)
+                else:
+                    self._strikes = 0
+            else:
+                self._strikes += 1
+        else:
+            if self._strikes == 3:
+                if random.random() > 0.5:
+                    if not self._current_relax_operator.decrease_size():
+                        self._select_new_pair(operators)
+                    else:
+                        self._strikes = 0
+                else:
+                    if not self._current_search_operator.increase_size():
+                        self._select_new_pair(operators)
+                    else:
+                        self._strikes = 0
+            else:
+                self._strikes += 1
+                    
+    def _select_new_pair(self, operators):
+        print(operators)
+        print(self._search_operators)
+        
+    
+        filtered = list(filter(lambda so: type(so) == type(operators[0]), self._relax_operators))
+        print(filtered)
+        self._current_relax_operator = random.choice(filtered)
+        self._current_search_operator = random.choice(self._search_operators)
+        self._strikes = 0
 
 class RouletteStrategy(AbstractStrategy):
     
@@ -116,7 +214,8 @@ class RouletteStrategy(AbstractStrategy):
         else:
             self.update_weights(operators, 0)
             
-        print(self._weights.values())
+        logger.debug('roulette weights: ' + pprint.pprint(self._weights))
+
     def update_weights(self, operators, ratio):
 
         self._weights[operators] = (1 - self._alpha) * self._weights[operators] - self._alpha * ratio 
@@ -126,10 +225,12 @@ class RouletteStrategy(AbstractStrategy):
 def get_strategy(type):
     """
     returns a new strategy of the given type
-    """
+    """    
     if type == 'random':
         return RandomStrategy()
     elif type == 'roulette':
         return RouletteStrategy()
+    elif type == 'johannes':
+        return JohannesStrategy()
     else:
         raise ValueError("no strategy '%s'" % type)

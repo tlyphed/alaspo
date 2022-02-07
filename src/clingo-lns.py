@@ -137,8 +137,6 @@ if __name__ == '__main__':
 
     strat, relax_operators, search_operators = json_config.parse_config(con, internal_solver)
 
-    strat = strategy.RandomStrategy()
-
     main(
         program=program,
         initial_operator=initial_operator,
