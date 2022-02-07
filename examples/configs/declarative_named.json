@@ -4,14 +4,14 @@
         {
             "type": "declarative",
             "name": "weeks",
-            "rates": [ 0.2 ],
-            "initialRate": 0.2
+            "sizes": [ 0.2 ],
+            "initialSize": 0.2
         },
         {
             "type": "declarative",
             "name": "groups",
-            "rates": [ 0.5, 0.8 ],
-            "initialRate": 0.8
+            "sizes": [ 0.5, 0.8 ],
+            "initialSize": 0.8
         }
     ],
     "searchOperators": [

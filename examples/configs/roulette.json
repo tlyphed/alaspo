@@ -3,13 +3,13 @@
     "relaxOperators": [
         {
             "type": "randomAtoms",
-            "rates": [ 0.2, 0.4, 0.6, 0.8 ],
-            "initialRate": 0.2
+            "sizes": [ 0.2, 0.4, 0.6, 0.8 ],
+            "initialSize": 0.2
         },
         {
             "type": "randomConstants",
-            "rates": [ 0.1, 0.2, 0.3, 0.5 ],
-            "initialRate": 0.2
+            "sizes": [ 0.1, 0.2, 0.3, 0.5 ],
+            "initialSize": 0.2
         }
     ],
     "searchOperators": [
