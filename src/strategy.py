@@ -95,34 +95,7 @@ class VariableStrategy(AbstractStrategy):
         return relax_operator, search_operator
 
     def on_move_finished(self, operators, prev_cost, result, time_used):   
-
-        """             
-        LOOP:
-
-        RUN LNS iteration with (S,N)
-
-        CASES:
-            1. Improvement found:
-            -> Do nothing ("Never change a winning team!")
-
-            2. UNSAT
-            (do this only after 3 times in a row, "1st strike, 2nd strike, out!")
-            (N cannot produce better solutions => size of N needs to be increased or
-            type of N needs to be changed)
-                -> INCREASE size for N to the next level; if there is none
-                (S,N) = SELECT_NEW_PAIR() where type of S or type of N is different
-
-            3. TIMEOUT:
-            (do this only after 3 times in a row, "1st strike, 2nd strike, out!")
-            (S cannot find better solutions => extensiveness of S needs to be
-            increased or size of N needs to be decreased)
-            -> DECIDE by coin flip:
-                a) DECREASE size for N to the next level; if there is none
-                (S,N) = SELECT_NEW_PAIR() where type of S or type of N is different
-
-                b) INCREASE extensiveness of S to the next level; if there is none
-                (S,N) = SELECT_NEW_PAIR() where type of S or type of N is different
-        """
+        
         if result.cost is not None:
             return
         elif not result.sat and result.exhausted:
