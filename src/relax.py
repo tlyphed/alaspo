@@ -16,7 +16,7 @@ class AbstractRelaxOperator():
             raise ValueError('list of sizes is empty')
 
         absolute = None
-        self._size = sorted(sizes)
+        self._sizes = sorted(sizes)
         relative = True
         for size in sizes:
             if not (size > 0.0 and size < 1.0):
@@ -38,9 +38,9 @@ class AbstractRelaxOperator():
             if not initial_size in sizes:
                 raise ValueError('initial size is not in list of all sizes')
 
-            self.__current_index = self._size.index(initial_size)
+            self.__current_index = self._sizes.index(initial_size)
        
-        self._size = self._size[self.__current_index]
+        self._size = self._sizes[self.__current_index]
         self._absolute = absolute
 
     def get_move_assumptions(self, incumbent):
@@ -56,9 +56,9 @@ class AbstractRelaxOperator():
         increases the relaxation rate to the next defined rate. 
         returns False if no increase is possible and True otherwise
         """
-        if self.__current_index < len(self._size) - 1:
+        if self.__current_index < len(self._sizes) - 1:
             self.__current_index += 1
-            self.size = self._size[self.__current_index]
+            self.size = self._sizes[self.__current_index]
         else:
             return False
 
@@ -72,7 +72,7 @@ class AbstractRelaxOperator():
         """
         if self.__current_index > 0:
             self.__current_index -= 1
-            self._size = self._size[self.__current_index]
+            self._size = self._sizes[self.__current_index]
         else:
             return False
 
@@ -219,7 +219,7 @@ class DeclarativeRelaxOperator(AbstractRelaxOperator):
         """
         operators = []
 
-        for size in self._size:
+        for size in self._sizes:
             operators += [ type(self)(sizes=[size], name=self.__name) ]
 
         return operators
