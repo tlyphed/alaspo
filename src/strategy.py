@@ -62,7 +62,7 @@ class RandomStrategy(AbstractStrategy):
 
         return relax_operator, search_operator
 
-class JohannesStrategy(AbstractStrategy):
+class VariableStrategy(AbstractStrategy):
     
     def prepare(self, relax_operators, search_operators):
         super().prepare(relax_operators, search_operators)
@@ -82,7 +82,7 @@ class JohannesStrategy(AbstractStrategy):
         
         self._strikes = 0
 
-        logger.debug('johannes strategy selected')
+        logger.debug('variable strategy selected')
         logger.debug('relax operators: ' + str([ o.name() for o in relax_operators ]))
         logger.debug('search operators: ' + str([ o.name() for o in search_operators ]))
 
@@ -230,7 +230,7 @@ def get_strategy(type):
         return RandomStrategy()
     elif type == 'roulette':
         return RouletteStrategy()
-    elif type == 'johannes':
-        return JohannesStrategy()
+    elif type == 'variable':
+        return VariableStrategy()
     else:
         raise ValueError("no strategy '%s'" % type)

@@ -1,5 +1,5 @@
 {
-    "strategy": "johannes",
+    "strategy": "variable",
     "relaxOperators": [
         {
             "type": "randomAtoms",
