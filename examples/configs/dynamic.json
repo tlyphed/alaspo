@@ -1,5 +1,5 @@
 {
-    "strategy": "variable",
+    "strategy": "dynamic",
     "relaxOperators": [
         {
             "type": "randomAtoms",

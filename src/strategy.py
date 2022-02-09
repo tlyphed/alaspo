@@ -62,25 +62,21 @@ class RandomStrategy(AbstractStrategy):
 
         return relax_operator, search_operator
 
-class VariableStrategy(AbstractStrategy):
+class DynamicStrategy(AbstractStrategy):
     
+    def __init__(self, unsat_strike_limit=3, timeout_strike_limit=1):
+        self.__unsat_strike_limit = unsat_strike_limit
+        self.__timeout_strike_limit = timeout_strike_limit
+
+
     def prepare(self, relax_operators, search_operators):
         super().prepare(relax_operators, search_operators)
-
-        relax_operators = []
-        for op in self._relax_operators:
-            relax_operators += op.flatten()
-        self._relax_operators = relax_operators
-
-        search_operators = []
-        for op in self._search_operators:
-            search_operators += op.flatten()
-        self._search_operators = search_operators
         
-        self._current_relax_operator = random.choice(self._relax_operators)
-        self._current_search_operator = random.choice(self._search_operators)
+        self.__current_relax_operator = random.choice(self._relax_operators)
+        self.__current_search_operator = random.choice(self._search_operators)
         
-        self._strikes = 0
+        self.__unsat_strikes = 0
+        self.__timeout_strikes = 0
 
         logger.debug('variable strategy selected')
         logger.debug('relax operators: ' + str([ o.name() for o in relax_operators ]))
@@ -89,48 +85,50 @@ class VariableStrategy(AbstractStrategy):
   
     def select_operators(self):
         
-        relax_operator = self._current_relax_operator
-        search_operator = self._current_search_operator
+        relax_operator = self.__current_relax_operator
+        search_operator = self.__current_search_operator
 
         return relax_operator, search_operator
 
     def on_move_finished(self, operators, prev_cost, result, time_used):   
         
-        if result.cost is not None:
-            return
-        elif not result.sat and result.exhausted:
-            if self._strikes == 3:
-                if not self._current_relax_operator.increase_size():
-                    self._select_new_pair(operators)
-                else:
-                    self._strikes = 0
-            else:
-                self._strikes += 1
-        else:
-            if self._strikes == 3:
-                if random.random() > 0.5:
-                    if not self._current_relax_operator.decrease_size():
+        if not result.sat:
+            if result.exhausted:
+                # UNSAT
+                self.__unsat_strikes += 1
+                if self.__unsat_strikes >= self.__unsat_strike_limit:
+                    self.__unsat_strikes = 0
+                    if not self.__current_relax_operator.increase_size():
                         self._select_new_pair(operators)
                     else:
-                        self._strikes = 0
-                else:
-                    if not self._current_search_operator.increase_size():
-                        self._select_new_pair(operators)
-                    else:
-                        self._strikes = 0
+                        logger.debug('increased relax size')
+                
             else:
-                self._strikes += 1
+                # TIMEOUT
+                self.__timeout_strikes += 1
+                if self.__timeout_strikes >= self.__timeout_strike_limit:
+                        self.__timeout_strikes = 0
+                        if random.random() > 0.5:
+                            # increase search time
+                            if not self.__current_search_operator.increase_size():
+                                self._select_new_pair(operators)
+                            else:
+                                logger.debug('increased search size')
+                        else:
+                            # decrease relax size
+                            if not self.__current_relax_operator.decrease_size():
+                                self._select_new_pair(operators)
+                            else:
+                                logger.debug('decreased relax size')
                     
     def _select_new_pair(self, operators):
-        print(operators)
-        print(self._search_operators)
-        
-    
-        filtered = list(filter(lambda so: type(so) == type(operators[0]), self._relax_operators))
-        print(filtered)
-        self._current_relax_operator = random.choice(filtered)
-        self._current_search_operator = random.choice(self._search_operators)
-        self._strikes = 0
+        logger.debug('selecting new operators')
+        relax_choices = [ o for o in self._relax_operators if o != self.__current_relax_operator ]
+        self.__current_relax_operator = random.choice(relax_choices)
+        self.__current_search_operator = random.choice(self._search_operators)
+
+        logger.debug('relax operator: ' + self.__current_relax_operator.name())
+        logger.debug('search operator: ' + self.__current_search_operator.name())
 
 class RouletteStrategy(AbstractStrategy):
     
@@ -203,7 +201,7 @@ def get_strategy(type):
         return RandomStrategy()
     elif type == 'roulette':
         return RouletteStrategy()
-    elif type == 'variable':
-        return VariableStrategy()
+    elif type == 'dynamic':
+        return DynamicStrategy()
     else:
         raise ValueError("no strategy '%s'" % type)
