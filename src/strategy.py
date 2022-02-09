@@ -100,7 +100,7 @@ class VariableStrategy(AbstractStrategy):
         if result.cost is not None:
             self._unsat_strikes = 0
             self._timeout_strikes = 0
-            return
+
         elif not result.sat and result.exhausted:
             if self._unsat_strikes == 3:
                 if not self._current_relax_operator.increase_size():
