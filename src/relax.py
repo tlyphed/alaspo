@@ -130,10 +130,7 @@ class RandomAtomRelaxOperator(AbstractRelaxOperator):
         return asm
 
     def name(self):
-        if self._absolute:
-            return '%i random atoms' % self._size
-        else:
-            return str(100 * self._size) + '% random atoms'
+        return 'random atoms: ' + str(self._sizes)
 
 
 class RandomConstantRelaxOperator(AbstractRelaxOperator):
@@ -161,11 +158,7 @@ class RandomConstantRelaxOperator(AbstractRelaxOperator):
         return assumptions
 
     def name(self):
-        if self._absolute:
-            return '%i random constants' % self._size
-        else:
-            return str(100 * self._size) + '% random constants'
-
+        return 'random constants: ' + str(self._sizes)
 
 class DeclarativeRelaxOperator(AbstractRelaxOperator):
 
@@ -221,7 +214,7 @@ class DeclarativeRelaxOperator(AbstractRelaxOperator):
         return asm
 
     def name(self):
-        return 'lns_select size: ' + str(self._size)
+        return 'lns_select "' + self.__name + '": ' + str(self._sizes)
 
     def flatten(self):
         """

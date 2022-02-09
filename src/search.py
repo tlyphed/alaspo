@@ -100,7 +100,7 @@ class ClingoSearchOperator(AbstractSearchOperator):
         return operators
 
     def name(self):
-        return '%is' % self._timeout
+        return 'default: ' + str(self.__timeouts)
 
 
 # SearchOperator Factory
