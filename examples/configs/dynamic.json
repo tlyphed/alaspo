@@ -1,5 +1,9 @@
 {
-    "strategy": "dynamic",
+    "strategy": {
+        "name": "dynamic",
+        "unsatStrikes": 3,
+        "timeoutStrikes": 1
+    },
     "relaxOperators": [
         {
             "type": "randomAtoms",

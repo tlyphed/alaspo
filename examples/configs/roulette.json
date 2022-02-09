@@ -1,5 +1,8 @@
 {
-    "strategy": "roulette",
+    "strategy": {
+        "name": "roulette",
+        "alpha": 0.5
+    },
     "relaxOperators": [
         {
             "type": "randomAtoms",

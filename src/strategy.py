@@ -133,6 +133,10 @@ class DynamicStrategy(AbstractStrategy):
         logger.debug('search operator: ' + self.__current_search_operator.name())
 
 class RouletteStrategy(AbstractStrategy):
+
+    def __init__(self, alpha=0.5, lex_weight=1000):
+        self.__alpha = alpha
+        self.__lex_weight = lex_weight
     
     def prepare(self, relax_operators, search_operators):
         super().prepare(relax_operators, search_operators)
@@ -154,8 +158,6 @@ class RouletteStrategy(AbstractStrategy):
                 self._weights[(r_op, s_op)] = 0
         
         self._to_initialize = True
-        
-        self._alpha = 0.5
 
         logger.debug('roulette strategy selected')
         logger.debug('relax operators: ' + str([ o.name() for o in relax_operators ]))
@@ -189,19 +191,31 @@ class RouletteStrategy(AbstractStrategy):
         logger.debug('roulette weights: ' + pprint.pprint(self._weights))
 
     def update_weights(self, operators, ratio):
-        self._weights[operators] = (1 - self._alpha) * self._weights[operators] - self._alpha * ratio 
+        self._weights[operators] = (1 - self.__alpha) * self._weights[operators] - self.__alpha * ratio 
 
 # Strategy Factory
 
-def get_strategy(type):
+def get_strategy(type, args):
     """
     returns a new strategy of the given type
     """    
     if type == 'random':
         return RandomStrategy()
     elif type == 'roulette':
-        return RouletteStrategy()
+        alpha = None
+        if 'alpha' in args:
+            alpha = args['alpha']
+        lex_weight = None
+        if 'lexWeight' in args:
+            lex_weight = args['lexWeight']
+        return RouletteStrategy(alpha=alpha, lex_weight=lex_weight)
     elif type == 'dynamic':
-        return DynamicStrategy()
+        unsat_strikes = None
+        if 'unsatStrikes' in args:
+            unsat_strikes = args['unsatStrikes']
+        timeout_strikes = None
+        if 'timeoutStrikes' in args:
+            timeout_strikes = args['timeoutStrikes']
+        return DynamicStrategy(unsat_strike_limit=unsat_strikes, timeout_strike_limit=timeout_strikes)
     else:
         raise ValueError("no strategy '%s'" % type)

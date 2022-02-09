@@ -30,6 +30,7 @@ class AbstractSearchOperator:
         returns False if no increase is possible and True otherwise
         """
         if self.__current_index < len(self.__timeouts) - 1:
+            old_timeout = self.__timeouts[self.__current_index]
             self.__current_index += 1
             self._timeout = self.__timeouts[self.__current_index]
         else:
@@ -55,7 +56,7 @@ class AbstractSearchOperator:
         resets the size of the operator to the lowest value
         """
         self.__current_index = 0
-        self._size = self.__timeouts[self.__current_index]
+        self._timeout = self.__timeouts[self.__current_index]
 
     def flatten(self):
         """

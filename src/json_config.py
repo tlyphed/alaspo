@@ -33,7 +33,12 @@ DEFAULT_CONFIG = """
 
 def parse_config(config, internal_solver):
     json_config = json.loads(config)
-    strategy_op = strategy.get_strategy(json_config['strategy'])
+
+    json_strategy = json_config['strategy']
+    strat_name = json_strategy['name']
+    strat_args = { k:v for k,v in json_strategy.items() if k != 'name' }
+
+    strategy_op = strategy.get_strategy(strat_name, strat_args)
     
     relax_operators = []
     for json_relax in json_config['relaxOperators']:
