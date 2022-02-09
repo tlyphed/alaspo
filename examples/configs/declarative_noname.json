@@ -3,15 +3,13 @@
     "relaxOperators": [
         {
             "type": "declarative",
-            "sizes": [ 0.2, 0.4, 0.6, 0.8 ],
-            "initialSize": 0.4
+            "sizes": [ 0.2, 0.4, 0.6, 0.8 ]
         }
     ],
     "searchOperators": [
         {
             "type": "default",
-            "timeouts": [ 5, 15, 30 ],
-            "initialTimeout": 15,
+            "timeouts": [ 5, 15, 30 ]
             "solverArguments": ""
         }
     ]

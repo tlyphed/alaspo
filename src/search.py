@@ -5,7 +5,7 @@ logger = logging.getLogger('root')
 
 class AbstractSearchOperator:
 
-    def __init__(self, timeouts, initial_timeout=None):
+    def __init__(self, timeouts):
         """
         initializes the operator with a non-empty set of timeouts and an optional initial timeout
         """
@@ -22,12 +22,6 @@ class AbstractSearchOperator:
         self.__timeouts = timeouts
 
         self.__current_index = 0
-        if initial_timeout != None:
-            if not initial_timeout in self.__timeouts:
-                raise ValueError('initial timeout is not in list of all timeout')
-
-            self.__current_index = self.__timeouts.index(initial_timeout)
-
         self._timeout = self.__timeouts[self.__current_index]
 
     def increase_size(self):
@@ -56,6 +50,13 @@ class AbstractSearchOperator:
 
         return True
 
+    def reset_size(self):
+        """
+        resets the size of the operator to the lowest value
+        """
+        self.__current_index = 0
+        self._size = self._sizes[self.__current_index]
+
     def flatten(self):
         """
         returns a list of operators where each contains only one of the timeouts
@@ -76,8 +77,8 @@ class AbstractSearchOperator:
 
 class ClingoSearchOperator(AbstractSearchOperator):
 
-    def __init__(self, internal_solver, timeouts, initial_timeout=None, strict_bound_prob=1.0):
-        super().__init__(timeouts, initial_timeout=initial_timeout)
+    def __init__(self, internal_solver, timeouts, strict_bound_prob=1.0):
+        super().__init__(timeouts)
         self.__timeouts = timeouts
         self.__strict_bound_prob = strict_bound_prob
         self.__internal_solver = internal_solver
@@ -111,10 +112,6 @@ def get_operator(type, args, internal_solver):
     """
     if type == 'default':
         timeouts = args['timeouts']
-        initial_timeout = None
-        if 'initialTimeout' in args:
-            initial_timeout = args['initialTimeout']
-
-        return ClingoSearchOperator(internal_solver, timeouts, initial_timeout)
+        return ClingoSearchOperator(internal_solver, timeouts)
     else:
         raise ValueError('no search operator "%s"' % type)

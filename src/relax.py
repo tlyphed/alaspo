@@ -7,7 +7,7 @@ logger = logging.getLogger('root')
 
 class AbstractRelaxOperator():
 
-    def __init__(self, sizes, initial_size=None):
+    def __init__(self, sizes):
         """
         initializes the operator with a non-empty set of relaxation sizes and an optional initial size. 
         the sizes are either all relative (between zero and one) or all absolute (integers bigger than zero)
@@ -32,13 +32,7 @@ class AbstractRelaxOperator():
         if not (absolute or relative):
             raise ValueError('sizes have to be all relative or all absolute!')
 
-
         self.__current_index = 0
-        if initial_size != None:
-            if not initial_size in sizes:
-                raise ValueError('initial size is not in list of all sizes')
-
-            self.__current_index = self._sizes.index(initial_size)
        
         self._size = self._sizes[self.__current_index]
         self._absolute = absolute
@@ -76,6 +70,14 @@ class AbstractRelaxOperator():
 
         return True
 
+    def reset_size(self):
+        """
+        resets the size of the operator to the lowest value
+        """
+        self.__current_index = 0
+        self._size = self._sizes[self.__current_index]
+
+
     def minimize_size(self):
         """
         decreases the relaxation rate to the next defined rate. 
@@ -108,8 +110,8 @@ class AbstractRelaxOperator():
 
 class RandomAtomRelaxOperator(AbstractRelaxOperator):
 
-    def __init__(self, sizes, initial_size=None):
-        super().__init__(sizes, initial_size)
+    def __init__(self, sizes):
+        super().__init__(sizes)
 
     def get_move_assumptions(self, incumbent):
         asm = []
@@ -135,8 +137,8 @@ class RandomAtomRelaxOperator(AbstractRelaxOperator):
 
 class RandomConstantRelaxOperator(AbstractRelaxOperator):
 
-    def __init__(self, sizes, initial_size=None):
-        super().__init__(sizes, initial_size)
+    def __init__(self, sizes):
+        super().__init__(sizes)
 
     def get_move_assumptions(self, incumbent):
         constants = set()
@@ -162,8 +164,8 @@ class RandomConstantRelaxOperator(AbstractRelaxOperator):
 
 class DeclarativeRelaxOperator(AbstractRelaxOperator):
 
-    def __init__(self, sizes, initial_size=None, name=None):
-        super().__init__(sizes, initial_size)
+    def __init__(self, sizes, name=None):
+        super().__init__(sizes)
         self.__name = name
 
     def get_move_assumptions(self, incumbent):
@@ -234,19 +236,16 @@ def get_operator(type, args):
     returns a new relax operator of the given type with given args
     """
     sizes = args['sizes']
-    initial_size = None
-    if 'initialSize' in args:
-        initial_size = args['initialSize']
 
     if type == 'randomAtoms':
-        return RandomAtomRelaxOperator(sizes, initial_size=initial_size)
+        return RandomAtomRelaxOperator(sizes)
     elif type == 'randomConstants':
-        return RandomConstantRelaxOperator(sizes, initial_size=initial_size)
+        return RandomConstantRelaxOperator(sizes)
     elif type == 'declarative':
         name = None
         if 'name' in args:
             name = args['name']
 
-        return DeclarativeRelaxOperator(sizes, initial_size=initial_size, name=name)
+        return DeclarativeRelaxOperator(sizes, name=name)
     else:
         raise ValueError('unknown relax operator "%s"' % type)

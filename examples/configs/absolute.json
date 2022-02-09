@@ -3,15 +3,13 @@
     "relaxOperators": [
         {
             "type": "randomAtoms",
-            "sizes": [ 2, 4, 5 ],
-            "initialSize": 2
+            "sizes": [ 2, 4, 5 ]
         }
     ],
     "searchOperators": [
         {
             "type": "default",
             "timeouts": [ 5, 15, 30 ],
-            "initialTimeout": 15,
             "solverArguments": ""
         }
     ]

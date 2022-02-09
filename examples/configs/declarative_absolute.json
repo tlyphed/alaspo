@@ -4,15 +4,13 @@
         {
             "type": "declarative",
             "name": "weeks",
-            "sizes": [ 2 ],
-            "initialSize": 2
+            "sizes": [ 2 ]
         }
     ],
     "searchOperators": [
         {
             "type": "default",
             "timeouts": [ 5, 15, 30 ],
-            "initialTimeout": 15,
             "solverArguments": ""
         }
     ]

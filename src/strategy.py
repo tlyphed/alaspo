@@ -84,11 +84,8 @@ class DynamicStrategy(AbstractStrategy):
 
   
     def select_operators(self):
-        
-        relax_operator = self.__current_relax_operator
-        search_operator = self.__current_search_operator
+        return self.__current_relax_operator, self.__current_search_operator
 
-        return relax_operator, search_operator
 
     def on_move_finished(self, operators, prev_cost, result, time_used):   
         if not result.sat:
@@ -98,7 +95,7 @@ class DynamicStrategy(AbstractStrategy):
                 if self.__unsat_strikes >= self.__unsat_strike_limit:
                     self.__unsat_strikes = 0
                     if not self.__current_relax_operator.increase_size():
-                        self._select_new_pair(operators)
+                        self.__select_new_pair()
                     else:
                         logger.debug('increased relax size')
                 
@@ -110,25 +107,27 @@ class DynamicStrategy(AbstractStrategy):
                         if random.random() > 0.5:
                             # increase search time
                             if not self.__current_search_operator.increase_size():
-                                self._select_new_pair(operators)
+                                self.__select_new_pair()
                             else:
                                 logger.debug('increased search size')
                         else:
-                            # decrease relax size
-                            if not self.__current_relax_operator.decrease_size():
-                                self._select_new_pair(operators)
-                            else:
-                                logger.debug('decreased relax size')
+                            # reset relax size
+                            self.__current_relax_operator.reset_size()
+                            logger.debug('reset relax size')
         else:
             # IMPROVEMENT
             self.__unsat_strikes = 0
             self.__timeout_strikes = 0
                     
-    def _select_new_pair(self, operators):
+    def __select_new_pair(self):
         logger.debug('selecting new operators')
-        relax_choices = [ o for o in self._relax_operators if o != self.__current_relax_operator ]
-        self.__current_relax_operator = random.choice(relax_choices)
+        if len(self._relax_operators) > 1:
+            relax_choices = [ o for o in self._relax_operators if o != self.__current_relax_operator ]
+            self.__current_relax_operator = random.choice(relax_choices)
         self.__current_search_operator = random.choice(self._search_operators)
+
+        self.__current_relax_operator.reset_size()
+        self.__current_search_operator.reset_size()
 
         logger.debug('relax operator: ' + self.__current_relax_operator.name())
         logger.debug('search operator: ' + self.__current_search_operator.name())
@@ -181,7 +180,6 @@ class RouletteStrategy(AbstractStrategy):
                     
                 self._to_initialize = False
 
-            
             ratio = (result.cost - prev_cost) / time_used
             self.update_weights(operators, ratio)
             
@@ -191,7 +189,6 @@ class RouletteStrategy(AbstractStrategy):
         logger.debug('roulette weights: ' + pprint.pprint(self._weights))
 
     def update_weights(self, operators, ratio):
-
         self._weights[operators] = (1 - self._alpha) * self._weights[operators] - self._alpha * ratio 
 
 # Strategy Factory
