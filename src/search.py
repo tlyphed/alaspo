@@ -55,7 +55,7 @@ class AbstractSearchOperator:
         resets the size of the operator to the lowest value
         """
         self.__current_index = 0
-        self._size = self._sizes[self.__current_index]
+        self._size = self.__timeouts[self.__current_index]
 
     def flatten(self):
         """
