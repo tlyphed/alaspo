@@ -80,7 +80,8 @@ class VariableStrategy(AbstractStrategy):
         self._current_relax_operator = random.choice(self._relax_operators)
         self._current_search_operator = random.choice(self._search_operators)
         
-        self._strikes = 0
+        self._unsat_strikes = 0
+        self._timeout_strikes = 0
 
         logger.debug('variable strategy selected')
         logger.debug('relax operators: ' + str([ o.name() for o in relax_operators ]))
@@ -97,40 +98,39 @@ class VariableStrategy(AbstractStrategy):
     def on_move_finished(self, operators, prev_cost, result, time_used):   
         
         if result.cost is not None:
+            self._unsat_strikes = 0
+            self._timeout_strikes = 0
             return
         elif not result.sat and result.exhausted:
-            if self._strikes == 3:
+            if self._unsat_strikes == 3:
                 if not self._current_relax_operator.increase_size():
                     self._select_new_pair(operators)
                 else:
-                    self._strikes = 0
+                    self._unsat_strikes = 0
             else:
-                self._strikes += 1
+                self._unsat_strikes += 1
         else:
-            if self._strikes == 3:
+            if self._timeout_strikes == 3:
                 if random.random() > 0.5:
-                    if not self._current_relax_operator.decrease_size():
+                    #set to lowest
+                    if not self._current_relax_operator.minimize_size():
                         self._select_new_pair(operators)
                     else:
-                        self._strikes = 0
+                        self._timeout_strikes = 0
                 else:
                     if not self._current_search_operator.increase_size():
                         self._select_new_pair(operators)
                     else:
-                        self._strikes = 0
+                        self._timeout_strikes = 0
             else:
-                self._strikes += 1
+                self._timeout_strikes += 1
                     
     def _select_new_pair(self, operators):
-        print(operators)
-        print(self._search_operators)
         
-    
-        filtered = list(filter(lambda so: type(so) == type(operators[0]), self._relax_operators))
-        print(filtered)
-        self._current_relax_operator = random.choice(filtered)
+        self._current_relax_operator = random.choice(self._relax_operators)
         self._current_search_operator = random.choice(self._search_operators)
-        self._strikes = 0
+        self._unsat_strikes = 0
+        self._timeout_strikes = 0
 
 class RouletteStrategy(AbstractStrategy):
     
