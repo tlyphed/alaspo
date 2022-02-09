@@ -119,6 +119,10 @@ class DynamicStrategy(AbstractStrategy):
                                 self._select_new_pair(operators)
                             else:
                                 logger.debug('decreased relax size')
+        else:
+            # IMPROVEMENT
+            self.__unsat_strikes = 0
+            self.__timeout_strikes = 0
                     
     def _select_new_pair(self, operators):
         logger.debug('selecting new operators')
