@@ -76,6 +76,18 @@ class AbstractRelaxOperator():
 
         return True
 
+    def minimize_size(self):
+        """
+        decreases the relaxation rate to the next defined rate. 
+        returns False if no decrease is possible and True otherwise
+        """
+        if self.__current_index > 0:
+            self._size = self._sizes[0]
+        else:
+            return False
+
+        return True
+
     def name(self):
         """
         return a string identifier for the operator (used for logging and statistics)

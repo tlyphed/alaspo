@@ -74,7 +74,7 @@ class DynamicStrategy(AbstractStrategy):
         
         self.__current_relax_operator = random.choice(self._relax_operators)
         self.__current_search_operator = random.choice(self._search_operators)
-        
+
         self.__unsat_strikes = 0
         self.__timeout_strikes = 0
 
@@ -91,7 +91,6 @@ class DynamicStrategy(AbstractStrategy):
         return relax_operator, search_operator
 
     def on_move_finished(self, operators, prev_cost, result, time_used):   
-        
         if not result.sat:
             if result.exhausted:
                 # UNSAT
