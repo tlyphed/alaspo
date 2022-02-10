@@ -158,7 +158,7 @@ class RouletteStrategy(AbstractStrategy):
         
         for r_op in self._relax_operators:
             for s_op in self._search_operators:
-                self._weights[(r_op, s_op)] = 0
+                self._weights[(r_op, s_op)] = 1
         
         self._to_initialize = True
 
@@ -170,22 +170,32 @@ class RouletteStrategy(AbstractStrategy):
         """
         returns a pair of relax and search operators depending on the weights
         """        
-
+        
+        logger.debug('weights: ' + str([ ((r.name(), s.name()), self._weights[(r,s)]) for r, s in self._weights ]))
+        logger.debug('cummulative sum of weights: ' + str(sum(self._weights.values())))
+        
         relax_operator, search_operator = random.choices(list(self._weights.keys()), list(self._weights.values()))[0]
 
         return relax_operator, search_operator
     
         
     def on_move_finished(self, operators, prev_cost, result, time_used):   
-        
-        if result.cost is not None:
+        cost = result.cost
+
+        if cost is not None:
+            if type(cost) == list:
+                cost = self.calculate_weighted_sum(cost)
+                
+            if type(prev_cost) == list:
+                prev_cost = self.calculate_weighted_sum(prev_cost)
+            
             if self._to_initialize:
                 for s_r_pair in self._weights:
-                    self._weights[s_r_pair] = result.cost
+                    self._weights[s_r_pair] = cost
                     
                 self._to_initialize = False
 
-            ratio = (result.cost - prev_cost) / time_used
+            ratio = (cost - prev_cost) / time_used
             self.update_weights(operators, ratio)
             
         else:
@@ -194,7 +204,18 @@ class RouletteStrategy(AbstractStrategy):
         logger.debug('roulette weights: ' + pprint.pprint(self._weights))
 
     def update_weights(self, operators, ratio):
-        self._weights[operators] = (1 - self.__alpha) * self._weights[operators] - self.__alpha * ratio 
+        new_weight = (1 - self.__alpha) * self._weights[operators] - self.__alpha * ratio
+        if new_weight < 0.001:
+            self._weights[operators] = 0.001
+        else:    
+            self._weights[operators] = new_weight
+            
+    def calculate_weighted_sum(self, list):
+        size = len(list) - 1
+        cost = 0
+        for i in range(len(list)):
+            cost += list[i]*(self.__lex_weight**(size-i))
+        return cost
 
 # Strategy Factory
 
