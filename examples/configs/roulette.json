@@ -2,8 +2,7 @@
 {
     "strategy": {
         "name": "roulette",
-        "unsatStrikes": 3,
-        "timeoutStrikes": 1
+        "alpha": 0.5
     },
     "relaxOperators": [
         {

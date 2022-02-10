@@ -73,9 +73,9 @@ class ClingoLNS:
         assumptions = None
         while time_left() > 0:
             move_start_time = time.time()
+            
             # get assumptions
-            # assumptions = None   # new neighbourhood every time!
-            if assumptions is None:
+            if assumptions is None or not self.__strategy.supports_intensification():
                 relax_operator, search_operator = self.__strategy.select_operators()
                 logger.debug('selected relax operator %s and search operator %s' % (relax_operator.name(), search_operator.name()))
                 assumptions = relax_operator.get_move_assumptions(incumbent)

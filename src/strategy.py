@@ -32,6 +32,12 @@ class AbstractStrategy():
         """
         pass
 
+    def supports_intensification(self):
+        """
+        whether or not the strategy supports intensification i.e. if the assumptions+operators are allowed to to be kept until no improvement can be achieved
+        the default is no intensification
+        """
+        return False
 
 class RandomStrategy(AbstractStrategy):
 
@@ -118,7 +124,10 @@ class DynamicStrategy(AbstractStrategy):
             # IMPROVEMENT
             self.__unsat_strikes = 0
             self.__timeout_strikes = 0
-                    
+
+    def supports_intensification(self):
+        return True
+
     def __select_new_pair(self):
         logger.debug('selecting new operators')
         if len(self._relax_operators) > 1:
@@ -171,10 +180,14 @@ class RouletteStrategy(AbstractStrategy):
         returns a pair of relax and search operators depending on the weights
         """        
         
-        logger.debug('weights: ' + str([ ((r.name(), s.name()), self._weights[(r,s)]) for r, s in self._weights ]))
-        logger.debug('cummulative sum of weights: ' + str(sum(self._weights.values())))
+        # logger.debug('weights: ' + str([ ((r.name(), s.name()), self._weights[(r,s)]) for r, s in self._weights ]))
+        # logger.debug('cummulative sum of weights: ' + str(sum(self._weights.values())))
         
-        relax_operator, search_operator = random.choices(list(self._weights.keys()), list(self._weights.values()))[0]
+        weights = [float(w)/max(self._weights.values()) for w in self._weights.values()]
+        relax_operator, search_operator = random.choices(list(self._weights.keys()), weights=weights, k=1)[0]
+
+        logger.debug('selected relax operator: ' + relax_operator.name())
+        logger.debug('selected search operator: ' + search_operator.name())
 
         return relax_operator, search_operator
     
@@ -201,14 +214,15 @@ class RouletteStrategy(AbstractStrategy):
         else:
             self.update_weights(operators, 0)
             
-        logger.debug('roulette weights: ' + str([ ((r.name(), s.name()), self._weights[(r,s)]) for r, s in self._weights ]))
+        logger.debug('roulette weights: \n' + str([ ((r.name(), s.name()), self._weights[(r,s)]) for r, s in self._weights ]))
 
     def update_weights(self, operators, ratio):
         new_weight = (1 - self.__alpha) * self._weights[operators] - self.__alpha * ratio
         if new_weight < 0.001:
-            self._weights[operators] = 0.001
-        else:    
-            self._weights[operators] = new_weight
+            new_weight = 0.001
+
+        logger.debug('updating weight of %s: %f -> %f' % ((operators[0].name(), operators[1].name()), self._weights[operators], new_weight))
+        self._weights[operators] = new_weight
             
     def calculate_weighted_sum(self, list):
         size = len(list) - 1
