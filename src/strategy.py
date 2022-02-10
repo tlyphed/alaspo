@@ -201,7 +201,7 @@ class RouletteStrategy(AbstractStrategy):
         else:
             self.update_weights(operators, 0)
             
-        logger.debug('roulette weights: ' + pprint.pprint(self._weights))
+        logger.debug('roulette weights: ' + str([ ((r.name(), s.name()), self._weights[(r,s)]) for r, s in self._weights ]))
 
     def update_weights(self, operators, ratio):
         new_weight = (1 - self.__alpha) * self._weights[operators] - self.__alpha * ratio
