@@ -102,7 +102,7 @@ class AbstractRelaxOperator():
         """
         operators = []
 
-        for size in self._size:
+        for size in self._sizes:
             operators += [ type(self)(sizes=[size]) ]
 
         return operators

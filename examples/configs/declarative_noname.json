@@ -9,7 +9,7 @@
     "searchOperators": [
         {
             "type": "default",
-            "timeouts": [ 5, 15, 30 ]
+            "timeouts": [ 5, 15, 30 ],
             "solverArguments": ""
         }
     ]

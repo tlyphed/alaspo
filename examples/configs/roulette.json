@@ -1,12 +1,14 @@
+
 {
     "strategy": {
         "name": "roulette",
-        "alpha": 0.5
+        "unsatStrikes": 3,
+        "timeoutStrikes": 1
     },
     "relaxOperators": [
         {
             "type": "randomAtoms",
-            "sizes": [ 0.2, 0.4, 0.6, 0.8 ]
+            "sizes": [ 0.1, 0.2, 0.4, 0.6, 0.8 ]
         },
         {
             "type": "randomConstants",
@@ -16,7 +18,7 @@
     "searchOperators": [
         {
             "type": "default",
-            "timeouts": [ 5, 15, 30 ],
+            "timeouts": [ 5, 15, 30, 60 ],
             "solverArguments": ""
         }
     ]

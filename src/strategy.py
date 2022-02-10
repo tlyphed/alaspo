@@ -93,22 +93,22 @@ class DynamicStrategy(AbstractStrategy):
                 # UNSAT
                 self.__unsat_strikes += 1
                 if self.__unsat_strikes >= self.__unsat_strike_limit:
-                    self.__unsat_strikes = 0
                     if not self.__current_relax_operator.increase_size():
                         self.__select_new_pair()
                     else:
+                        self.__unsat_strikes = 0
                         logger.debug('increased relax size')
                 
             else:
                 # TIMEOUT
                 self.__timeout_strikes += 1
                 if self.__timeout_strikes >= self.__timeout_strike_limit:
-                        self.__timeout_strikes = 0
                         if random.random() > 0.5:
                             # increase search time
                             if not self.__current_search_operator.increase_size():
                                 self.__select_new_pair()
                             else:
+                                self.__timeout_strikes = 0
                                 logger.debug('increased search size')
                         else:
                             # reset relax size
@@ -124,10 +124,13 @@ class DynamicStrategy(AbstractStrategy):
         if len(self._relax_operators) > 1:
             relax_choices = [ o for o in self._relax_operators if o != self.__current_relax_operator ]
             self.__current_relax_operator = random.choice(relax_choices)
+
         self.__current_search_operator = random.choice(self._search_operators)
 
         self.__current_relax_operator.reset_size()
         self.__current_search_operator.reset_size()
+        self.__unsat_strikes = 0
+        self.__timeout_strikes = 0
 
         logger.debug('relax operator: ' + self.__current_relax_operator.name())
         logger.debug('search operator: ' + self.__current_search_operator.name())
