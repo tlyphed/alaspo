@@ -216,7 +216,7 @@ class DeclarativeRelaxOperator(AbstractRelaxOperator):
         return asm
 
     def name(self):
-        if self._name != None:
+        if self.__name != None:
             return 'lns_select "' + self.__name + '": ' + str(self._sizes)
         else:
             return 'lns_select: ' + str(self._sizes)

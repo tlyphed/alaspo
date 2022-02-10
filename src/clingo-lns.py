@@ -10,6 +10,8 @@ import initial
 import strategy
 import config
 import json_config
+import relax
+import search
 logger = config.setup_logger('root')
 
 
@@ -61,6 +63,20 @@ if __name__ == '__main__':
         else:
             raise argparse.ArgumentTypeError('0 <= <n> <= 1 required!')
 
+    def valid_quick_config(argument):
+        conf = argument.split(',')
+        if len(conf) != 3:
+            raise argparse.ArgumentTypeError('config string is not correct!')
+        rate = float(conf[1])
+        if not (0 <= rate <= 1):
+            raise argparse.ArgumentTypeError('0 <= rate <= 1 required!')
+        
+        time = int(conf[2])
+        if not (0 < time):
+            raise argparse.ArgumentTypeError('timeout > 0 required!')
+        
+        return argument
+
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description='ASP + Large-Neighborhood Search')
 
     parser.add_argument('-i', '--input', type=existing_files, metavar='file', default=None, nargs='+',
@@ -69,8 +85,13 @@ if __name__ == '__main__':
     parser.add_argument('-gt', '--time-limit', type=int, metavar='<n>', default=300,
                         help='time limit for the lns search')
 
-    parser.add_argument("-c", "--config", type=existing_files, metavar='file',
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument("-c", "--config-file", type=existing_files, metavar='<file>',
                         help='the config file specifying the relax and search operators')
+
+    group.add_argument("-q", "--quick-config", type=valid_quick_config, metavar='<config>',
+                        help='a config string containing a neighborhood type ("randomAtoms", "randomConstaints" or "declarative"), a relaxation rate, and a move timeout seperated by comma')
 
     parser.add_argument('-st', '--solver-type', type=str, choices=['clingo', 'clingo-dl', 'clingcon'],
                         metavar='<arg>', default='clingo',
@@ -93,6 +114,7 @@ if __name__ == '__main__':
                         help='whether or not the previous state should be forgotten on each new lns iteration')
     parser.set_defaults(forget_on_shot=False)
 
+   
     args = parser.parse_args()
 
     if args.seed is None:
@@ -130,12 +152,25 @@ if __name__ == '__main__':
     initial_operator = initial.ClingoInitialOperator(internal_solver, args.time_limit,
                                                      pre_opt_time=args.pre_optimize_timeout)
 
-    con = json_config.DEFAULT_CONFIG
-    if args.config != None:
-        with open(args.config, 'r') as f:
-            con = f.read()
+    strat = None
+    relax_operators = None
+    search_operators = None
 
-    strat, relax_operators, search_operators = json_config.parse_config(con, internal_solver)
+    if args.config_file != None:
+        with open(args.config_file, 'r') as f:
+            con = f.read()
+            strat, relax_operators, search_operators = json_config.parse_config(con, internal_solver)
+    elif args.quick_config != None:
+        conf_string = args.quick_config.split(',')
+        op_name = conf_string[0].strip()
+        rate = float(conf_string[1].strip())
+        mt = int(conf_string[2].strip())
+
+        strat = strategy.RandomStrategy()
+        relax_operators = [ relax.get_operator(op_name, { 'sizes': [ rate ] }) ]
+        search_operators = [ search.get_operator('default', { 'timeouts': [ mt ] }, internal_solver) ]
+    else:
+        strat, relax_operators, search_operators = json_config.parse_config(json_config.DEFAULT_CONFIG, internal_solver)
 
     main(
         program=program,
