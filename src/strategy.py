@@ -41,6 +41,9 @@ class AbstractStrategy():
 
 class RandomStrategy(AbstractStrategy):
 
+    def __init__(self, supports_intensification=False):
+        self.__supports_intensification = supports_intensification
+
     def prepare(self, relax_operators, search_operators):
         super().prepare(relax_operators, search_operators)
 
@@ -67,6 +70,9 @@ class RandomStrategy(AbstractStrategy):
         search_operator = random.choice(self._search_operators)
 
         return relax_operator, search_operator
+
+    def supports_intensification(self):
+        return self.__supports_intensification
 
 class DynamicStrategy(AbstractStrategy):
     

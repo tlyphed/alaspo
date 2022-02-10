@@ -166,7 +166,7 @@ if __name__ == '__main__':
         rate = float(conf_string[1].strip())
         mt = int(conf_string[2].strip())
 
-        strat = strategy.RandomStrategy()
+        strat = strategy.RandomStrategy(supports_intensification=True)
         relax_operators = [ relax.get_operator(op_name, { 'sizes': [ rate ] }) ]
         search_operators = [ search.get_operator('default', { 'timeouts': [ mt ] }, internal_solver) ]
     else:

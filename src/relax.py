@@ -107,7 +107,6 @@ class AbstractRelaxOperator():
 
         return operators
 
-
 class RandomAtomRelaxOperator(AbstractRelaxOperator):
 
     def __init__(self, sizes):
