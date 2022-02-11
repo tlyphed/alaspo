@@ -71,7 +71,7 @@ class Clingo:
 
         see clingo.Model, the return value somewhat mirrors it.
         """
-        logger.debug("rawmodel: %s", rawmodel)
+        # logger.debug("rawmodel: %s", rawmodel) (this messes up output in interactive mode)
         model = argparse.Namespace()
         model.cost = rawmodel.cost.copy()
         model.number = rawmodel.number

@@ -2,6 +2,9 @@
 import random
 import pprint
 import logging
+
+import config
+
 logger = logging.getLogger('root')
 
 class AbstractStrategy():
@@ -263,3 +266,43 @@ def get_strategy(type, args):
         return DynamicStrategy(unsat_strike_limit=unsat_strikes, timeout_strike_limit=timeout_strikes)
     else:
         raise ValueError("no strategy '%s'" % type)
+
+
+class InteractiveStrategy(AbstractStrategy):
+
+    def __init__(self, supports_intensification=False):
+        self.__supports_intensification = supports_intensification
+
+    def prepare(self, relax_operators, search_operators):
+        super().prepare(relax_operators, search_operators)
+
+        relax_operators = []
+        for op in self._relax_operators:
+            relax_operators += op.flatten()
+        self._relax_operators = relax_operators
+
+        search_operators = []
+        for op in self._search_operators:
+            search_operators += op.flatten()
+        self._search_operators = search_operators
+
+        config.SEARCH_OPS = search_operators
+        config.CURRENT_SEARCH_OP = search_operators[0]
+        config.RELAX_OPS = relax_operators
+        config.CURRENT_RELAX_OP = relax_operators[0]
+
+        logger.debug('interactive strategy selected')
+        logger.debug('relax operators: ' + str([o.name() for o in relax_operators]))
+        logger.debug('search operators: ' + str([o.name() for o in search_operators]))
+
+    def select_operators(self):
+        """
+        returns current pair of relax and search operator
+        """
+        relax_operator = config.CURRENT_RELAX_OP
+        search_operator = config.CURRENT_SEARCH_OP
+
+        return relax_operator, search_operator
+
+    def supports_intensification(self):
+        return self.__supports_intensification

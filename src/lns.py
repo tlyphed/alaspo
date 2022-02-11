@@ -1,8 +1,12 @@
 import time
+
+import config
 import initial
 import logging
 logger = logging.getLogger('root')
 
+# keep track of best solution found so far
+BEST_SOLUTION = None
 
 class ClingoLNS:
     
@@ -62,12 +66,13 @@ class ClingoLNS:
 
         incumbent = solution
 
+        global BEST_SOLUTION
+        BEST_SOLUTION = incumbent
+
         if solution.exhausted:
             logger.info('OPTIMAL SOLUTION FOUND')
             return incumbent
 
-        global best_solution
-        best_solution = incumbent
 
         # LNS loop
         assumptions = None
@@ -87,6 +92,7 @@ class ClingoLNS:
                 # solution found, update incumbent
                 incumbent = solution
                 logger.info('found solution with cost: ' + str(incumbent.cost))
+                BEST_SOLUTION = incumbent
                 if prev_cost == solution.cost:
                     assumptions = None
                 self._unsat_count = 0

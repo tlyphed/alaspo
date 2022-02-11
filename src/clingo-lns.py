@@ -5,7 +5,7 @@ import argparse
 import signal
 from collections import namedtuple
 import solver
-from lns import ClingoLNS
+import lns
 import initial
 import strategy
 import config
@@ -22,7 +22,7 @@ def print_model(atoms):
 
 
 def main(program, initial_operator, relax_operators, search_operators, strategy, internal_solver, global_timeout):
-    solver = ClingoLNS(internal_solver, program, initial_operator, relax_operators, search_operators, strategy)
+    solver = lns.ClingoLNS(internal_solver, program, initial_operator, relax_operators, search_operators, strategy)
 
     solution = solver.solve(global_timeout)
     if solution is not None:
@@ -37,15 +37,51 @@ if __name__ == '__main__':
     def signal_handler(sig, frame):
         sys.stderr.flush()
         sys.stdout.flush()
-        input('Search interrupted! Press ENTER to continue ...')
+        print('Search interrupted!')
 
-        # print('Search interrupted!')
-        # if vlns.best_solution is not None:
-        #    print_model(vlns.best_solution.atoms)
-        #    print("Costs: " + str(vlns.best_solution.cost))
-        # else:
-        #     print("No solution found!")
-        # sys.exit(0)
+        if lns.BEST_SOLUTION is not None:
+            print_model(lns.BEST_SOLUTION.model.shown)
+            print("Costs: " + str(lns.BEST_SOLUTION.cost))
+        else:
+            print("No solution found!")
+
+        if config.INTERACTIVE:
+            while True:
+                print(f'Current search configuration: {config.CURRENT_SEARCH_OP.name()}')
+                print('Search portfolio:')
+                for i in range(len(config.SEARCH_OPS)):
+                    print(f'{i}: {config.SEARCH_OPS[i].name()}')
+                search = input('Select search configuration (or C to exit): ')
+                if search == '':
+                    break
+                if search.upper() == 'C':
+                    sys.exit(0)
+                if search.isdigit():
+                    search_index = int(search)
+                    if 0 <= search_index < len(config.SEARCH_OPS):
+                        config.CURRENT_SEARCH_OP = config.SEARCH_OPS[search_index]
+                        break
+                print('Not a valid index!')
+
+            while True:
+                print(f'Current neighbourhood: {config.CURRENT_RELAX_OP.name()}')
+                print('Neighbourhood portfolio:')
+                for i in range(len(config.RELAX_OPS)):
+                    print(f'{i}: {config.RELAX_OPS[i].name()}')
+                nh = input('Select search configuration (or C to exit): ')
+                if nh == '':
+                    break
+                if nh.upper() == 'C':
+                    sys.exit(0)
+                if nh.isdigit():
+                    nh_index = int(nh)
+                    if 0 <= nh_index < len(config.RELAX_OPS):
+                        config.CURRENT_RELAX_OP = config.RELAX_OPS[nh_index]
+                        break
+                print('Not a valid index!')
+
+        else:
+            sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -114,6 +150,9 @@ if __name__ == '__main__':
                         help='whether or not the previous state should be forgotten on each new lns iteration')
     parser.set_defaults(forget_on_shot=False)
 
+    parser.add_argument('-ia', '--interactive', action='store_true',
+                        help='select interactive selection strategy')
+    parser.set_defaults(interactive=False)
    
     args = parser.parse_args()
 
@@ -171,6 +210,11 @@ if __name__ == '__main__':
         search_operators = [ search.get_operator('default', { 'timeouts': [ mt ] }, internal_solver) ]
     else:
         strat, relax_operators, search_operators = json_config.parse_config(json_config.DEFAULT_CONFIG, internal_solver)
+
+    # for interactive mode
+    if args.interactive is True:
+        config.INTERACTIVE = True
+        strat = strategy.InteractiveStrategy()
 
     main(
         program=program,
