@@ -23,6 +23,12 @@ class AbstractStrategy():
         self._relax_operators = relax_operators
         self._search_operators = search_operators
 
+    def get_portfolio(self):
+        """
+        returns a tuple containing the used relax and search operators
+        """
+        return (self._relax_operators, self._search_operators)
+
     def select_operators(self):
         """
         returns a pair of relax and search operator
@@ -286,10 +292,8 @@ class InteractiveStrategy(AbstractStrategy):
             search_operators += op.flatten()
         self._search_operators = search_operators
 
-        config.SEARCH_OPS = search_operators
-        config.CURRENT_SEARCH_OP = search_operators[0]
-        config.RELAX_OPS = relax_operators
-        config.CURRENT_RELAX_OP = relax_operators[0]
+        self.__search_operator = search_operators[0]
+        self.__relax_operator = relax_operators[0]
 
         logger.debug('interactive strategy selected (Ctrl-C to interrupt search)')
         logger.debug('relax operators: ' + str([o.name() for o in relax_operators]))
@@ -299,10 +303,11 @@ class InteractiveStrategy(AbstractStrategy):
         """
         returns current pair of relax and search operator
         """
-        relax_operator = config.CURRENT_RELAX_OP
-        search_operator = config.CURRENT_SEARCH_OP
-
-        return relax_operator, search_operator
+        return self.__relax_operator, self.__search_operator
 
     def supports_intensification(self):
         return self.__supports_intensification
+
+    def set_operators(self, relax_operator, search_operator):
+        self.__relax_operator = relax_operator
+        self.__search_operator = search_operator

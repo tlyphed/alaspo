@@ -14,15 +14,71 @@ import relax
 import search
 logger = config.setup_logger('root')
 
-
 def print_model(atoms):
     for a in atoms:
         print(a, end=' ')
     print(" ")
 
 
-def main(program, initial_operator, relax_operators, search_operators, strategy, internal_solver, global_timeout):
-    solver = lns.ClingoLNS(internal_solver, program, initial_operator, relax_operators, search_operators, strategy)
+def main(program, initial_operator, relax_operators, search_operators, strat, internal_solver, global_timeout):
+    solver = lns.ClingoLNS(internal_solver, program, initial_operator, relax_operators, search_operators, strat)
+
+    def signal_handler(sig, frame):
+        nonlocal solver, strat
+        sys.stderr.flush()
+        sys.stdout.flush()
+        print('Search interrupted!')
+
+        if solver.best_solution is not None:
+            print_model(solver.best_solution.model.shown)
+            print("Costs: " + str(solver.best_solution.cost))
+        else:
+            print("No solution found!")
+
+        if type(strat) == strategy.InteractiveStrategy:
+            search_op = solver.search_operator
+            relax_op = solver.relax_operator
+            relax_operators, search_operators = solver.get_portfolio()
+            print(f'Current search configuration: {search_op.name()}')
+            print('Search portfolio:')
+            for i in range(len(search_operators)):
+                print(f'{i}: {search_operators[i].name()}')
+            while True:
+                search = input('Select search configuration (ENTER = no change, C = exit): ')
+                if search == '':
+                    break
+                if search.upper() == 'C':
+                    sys.exit(0)
+                if search.isdigit():
+                    search_index = int(search)
+                    if 0 <= search_index < len(search_operators):
+                        search_op = search_operators[search_index]
+                        break
+                print('Not a valid index!')
+
+            print(f'Current neighbourhood: {relax_op.name()}')
+            print('Neighbourhood portfolio:')
+            for i in range(len(relax_operators)):
+                print(f'{i}: {relax_operators[i].name()}')
+            while True:
+                nh = input('Select search configuration (ENTER = no change, C = exit): ')
+                if nh == '':
+                    break
+                if nh.upper() == 'C':
+                    sys.exit(0)
+                if nh.isdigit():
+                    nh_index = int(nh)
+                    if 0 <= nh_index < len(relax_operators):
+                        relax_op = relax_operators[nh_index]
+                        break
+                print('Not a valid index!')
+
+            strat.set_operators(relax_op, search_op)
+        else:
+            sys.exit(0)
+
+
+    signal.signal(signal.SIGINT, signal_handler)
 
     solution = solver.solve(global_timeout)
     if solution is not None:
@@ -33,58 +89,6 @@ def main(program, initial_operator, relax_operators, search_operators, strategy,
 
 
 if __name__ == '__main__':
-
-    def signal_handler(sig, frame):
-        sys.stderr.flush()
-        sys.stdout.flush()
-        print('Search interrupted!')
-
-        if lns.BEST_SOLUTION is not None:
-            print_model(lns.BEST_SOLUTION.model.shown)
-            print("Costs: " + str(lns.BEST_SOLUTION.cost))
-        else:
-            print("No solution found!")
-
-        if config.INTERACTIVE:
-            print(f'Current search configuration: {config.CURRENT_SEARCH_OP.name()}')
-            print('Search portfolio:')
-            for i in range(len(config.SEARCH_OPS)):
-                print(f'{i}: {config.SEARCH_OPS[i].name()}')
-            while True:
-                search = input('Select search configuration (ENTER = no change, C = exit): ')
-                if search == '':
-                    break
-                if search.upper() == 'C':
-                    sys.exit(0)
-                if search.isdigit():
-                    search_index = int(search)
-                    if 0 <= search_index < len(config.SEARCH_OPS):
-                        config.CURRENT_SEARCH_OP = config.SEARCH_OPS[search_index]
-                        break
-                print('Not a valid index!')
-
-            print(f'Current neighbourhood: {config.CURRENT_RELAX_OP.name()}')
-            print('Neighbourhood portfolio:')
-            for i in range(len(config.RELAX_OPS)):
-                print(f'{i}: {config.RELAX_OPS[i].name()}')
-            while True:
-                nh = input('Select search configuration (ENTER = no change, C = exit): ')
-                if nh == '':
-                    break
-                if nh.upper() == 'C':
-                    sys.exit(0)
-                if nh.isdigit():
-                    nh_index = int(nh)
-                    if 0 <= nh_index < len(config.RELAX_OPS):
-                        config.CURRENT_RELAX_OP = config.RELAX_OPS[nh_index]
-                        break
-                print('Not a valid index!')
-
-        else:
-            sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
-
 
     def existing_files(argument):
         if os.path.exists(argument) and os.path.isfile(argument):
@@ -212,8 +216,8 @@ if __name__ == '__main__':
         strat, relax_operators, search_operators = json_config.parse_config(json_config.DEFAULT_CONFIG, internal_solver)
 
     # for interactive mode
+    interactive = False
     if args.interactive is True:
-        config.INTERACTIVE = True
         strat = strategy.InteractiveStrategy()
 
     main(
@@ -221,7 +225,7 @@ if __name__ == '__main__':
         initial_operator=initial_operator,
         relax_operators=relax_operators,
         search_operators=search_operators,
-        strategy=strat,
+        strat=strat,
         internal_solver=internal_solver,
         global_timeout=args.time_limit
     )

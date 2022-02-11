@@ -1,12 +1,8 @@
 import time
-
-import config
+import signal
 import initial
 import logging
 logger = logging.getLogger('root')
-
-# keep track of best solution found so far
-BEST_SOLUTION = None
 
 class ClingoLNS:
     
@@ -26,8 +22,20 @@ class ClingoLNS:
 
         self.__strategy = strategy
 
+        # keep references current operators
+        self.relax_operator = None
+        self.search_operator = None
+
         self.__strategy.prepare(relax_operators, search_operators)
 
+        self.best_solution = None
+
+    def get_portfolio(self):
+        """
+        returns a tuple containing the used relax and search operators
+        """
+
+        return self.__strategy.get_portfolio()
 
     def solve(self, timeout):
         """
@@ -66,8 +74,7 @@ class ClingoLNS:
 
         incumbent = solution
 
-        global BEST_SOLUTION
-        BEST_SOLUTION = incumbent
+        self.best_solution = incumbent
 
         if solution.exhausted:
             logger.info('OPTIMAL SOLUTION FOUND')
@@ -81,18 +88,18 @@ class ClingoLNS:
             
             # get assumptions
             if assumptions is None or not self.__strategy.supports_intensification():
-                relax_operator, search_operator = self.__strategy.select_operators()
-                logger.debug('selected relax operator %s and search operator %s' % (relax_operator.name(), search_operator.name()))
-                assumptions = relax_operator.get_move_assumptions(incumbent)
+                self.relax_operator, self.search_operator = self.__strategy.select_operators()
+                logger.debug('selected relax operator %s and search operator %s' % (self.relax_operator.name(), self.search_operator.name()))
+                assumptions = self.relax_operator.get_move_assumptions(incumbent)
             # perform move
-            solution = search_operator.execute(assumptions, time_left())
+            solution = self.search_operator.execute(assumptions, time_left())
 
             prev_cost = incumbent.cost
             if solution.sat:
                 # solution found, update incumbent
                 incumbent = solution
                 logger.info('found solution with cost: ' + str(incumbent.cost))
-                BEST_SOLUTION = incumbent
+                self.best_solution = incumbent
                 if prev_cost == solution.cost:
                     assumptions = None
                 self._unsat_count = 0
@@ -114,7 +121,7 @@ class ClingoLNS:
                 assumptions = None
 
             move_end_time = time.time()
-            operators = (relax_operator, search_operator)
+            operators = (self.relax_operator, self.search_operator)
             self.__strategy.on_move_finished(operators, prev_cost, solution, move_end_time - move_start_time)
 
         return incumbent
