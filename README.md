@@ -1,9 +1,11 @@
-# clingo-lns
+# ALASPO
 
-An LNS framework for the Potassco ASP solver suite.
+An (adaptive) LNS framework for the for ASP systems. Currently, the system only supports solvers based on [clingo](https://potassco.org/). 
 
-The folder `src` contains the LNS implementation template as well a simple random relaxation-based problem-independent LNS. 
-Should work out-of-the-box in a conda env after running the following command:
+The folder `src` contains the LNS implementation as well as simple problem-independent relaxation operators and adaption strategies. 
+Examples for portfolio config files can be found in the èxamples` folder.
+
+It should work out-of-the-box in a conda env after running the following command:
 ```
 conda install -c potassco/label/dev clingo clingo-dl clingcon
 ```
