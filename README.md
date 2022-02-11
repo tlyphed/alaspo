@@ -11,7 +11,7 @@ conda install -c potassco/label/dev clingo clingo-dl clingcon
 
 The command-line options of the problem-independent LNS can be shown as follows:
 ```
-python src/clingo-lns.py -h
+python src/alaspo.py -h
 ```
 Examples for portfolio config files can be found in the `examples` folder.
 
