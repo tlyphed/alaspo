@@ -46,12 +46,12 @@ if __name__ == '__main__':
             print("No solution found!")
 
         if config.INTERACTIVE:
+            print(f'Current search configuration: {config.CURRENT_SEARCH_OP.name()}')
+            print('Search portfolio:')
+            for i in range(len(config.SEARCH_OPS)):
+                print(f'{i}: {config.SEARCH_OPS[i].name()}')
             while True:
-                print(f'Current search configuration: {config.CURRENT_SEARCH_OP.name()}')
-                print('Search portfolio:')
-                for i in range(len(config.SEARCH_OPS)):
-                    print(f'{i}: {config.SEARCH_OPS[i].name()}')
-                search = input('Select search configuration (or C to exit): ')
+                search = input('Select search configuration (ENTER = no change, C = exit): ')
                 if search == '':
                     break
                 if search.upper() == 'C':
@@ -63,12 +63,12 @@ if __name__ == '__main__':
                         break
                 print('Not a valid index!')
 
+            print(f'Current neighbourhood: {config.CURRENT_RELAX_OP.name()}')
+            print('Neighbourhood portfolio:')
+            for i in range(len(config.RELAX_OPS)):
+                print(f'{i}: {config.RELAX_OPS[i].name()}')
             while True:
-                print(f'Current neighbourhood: {config.CURRENT_RELAX_OP.name()}')
-                print('Neighbourhood portfolio:')
-                for i in range(len(config.RELAX_OPS)):
-                    print(f'{i}: {config.RELAX_OPS[i].name()}')
-                nh = input('Select search configuration (or C to exit): ')
+                nh = input('Select search configuration (ENTER = no change, C = exit): ')
                 if nh == '':
                     break
                 if nh.upper() == 'C':

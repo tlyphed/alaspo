@@ -291,7 +291,7 @@ class InteractiveStrategy(AbstractStrategy):
         config.RELAX_OPS = relax_operators
         config.CURRENT_RELAX_OP = relax_operators[0]
 
-        logger.debug('interactive strategy selected')
+        logger.debug('interactive strategy selected (Ctrl-C to interrupt search)')
         logger.debug('relax operators: ' + str([o.name() for o in relax_operators]))
         logger.debug('search operators: ' + str([o.name() for o in search_operators]))
 
