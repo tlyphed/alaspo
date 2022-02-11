@@ -12,3 +12,5 @@ The command-line options of the problem-independent LNS can be shown as follows:
 ```
 python src/clingo-lns.py -h
 ```
+
+Copyright (c) 2022 [TU Wien]
